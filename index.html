@@ -194,7 +194,7 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:var(--bg) u
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='2.1';
+const VERSION='2.2';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -251,7 +251,7 @@ const store={
   online:!!DB&&!DEMO,
   async createTrip(t){ if(DB&&!DEMO){await DB.collection('trips').doc(t.id).set(t);} else {LS('toast:trip:'+t.id,t);LS('toast:items:'+t.id,[]);} },
   async getTrip(id){ if(DB&&!DEMO){const d=await DB.collection('trips').doc(id).get();return d.exists?d.data():null;} return LS('toast:trip:'+id); },
-  async myTrips(uid){ if(DB&&!DEMO){const s=await DB.collection('trips').where('ownerUid','==',uid).get();return s.docs.map(d=>d.data()).sort((a,b)=>b.createdAt-a.createdAt);} return [...new Set([...(LSOK?Object.keys(localStorage):[]),...Object.keys(MEM)])].filter(k=>k.startsWith('toast:trip:')).map(k=>LS(k)).filter(t=>t&&t.ownerUid===uid).sort((a,b)=>b.createdAt-a.createdAt); },
+  async myTrips(uid){ let a; if(DB&&!DEMO){const s=await DB.collection('trips').where('ownerUid','==',uid).get();a=s.docs.map(d=>d.data());} else a=[...new Set([...(LSOK?Object.keys(localStorage):[]),...Object.keys(MEM)])].filter(k=>k.startsWith('toast:trip:')).map(k=>LS(k)).filter(t=>t&&t.ownerUid===uid); return a.filter(t=>!t.demoFriend).sort((a,b)=>b.createdAt-a.createdAt); },
   async getItems(id){ if(DB&&!DEMO){const s=await DB.collection('trips').doc(id).collection('items').get();return s.docs.map(d=>d.data());} return LS('toast:items:'+id)||[]; },
   async updateTrip(id,patch){ if(DB&&!DEMO){await DB.collection('trips').doc(id).update(patch);} else {LS('toast:trip:'+id,{...LS('toast:trip:'+id),...patch});} },
   watchItems(id,cb){
@@ -293,7 +293,7 @@ async function boot(){
   if(!S.tripId){renderLanding();return;}
   S.trip=await store.getTrip(S.tripId);
   if(!S.trip){renderLanding(store.online?'ไม่พบกระเป๋านี้ ลิงค์อาจผิดหรือถูกลบไปแล้ว':'ยังอยู่ในโหมดทดลองในเครื่อง กระเป๋าเห็นได้เฉพาะเบราว์เซอร์ที่สร้าง — ต้องเชื่อม Firebase ก่อนจึงจะแชร์ลิงค์ให้เพื่อนได้');return;}
-  const isOwner=S.user&&S.trip.ownerUid===S.user.uid;
+  const isOwner=S.user&&S.trip.ownerUid===S.user.uid&&!S.trip.demoFriend;
   if(!S.role){ S.role=isOwner?'shopper':'requester'; }
   if(S.role==='shopper'&&!isOwner){ S.role='requester'; }
   S.me=LS('toast:me')||'';
@@ -354,8 +354,9 @@ function homeTabs(){
 async function renderLanding(err){
   document.body.classList.add('landing');
   const linkCard=`<div class="card"><h3>ได้ลิงค์จากเพื่อนมา?</h3><div class="row" style="margin-top:8px"><input id="tLink" placeholder="วางลิงค์" style="padding:8px 12px;border:1.5px solid var(--line);border-radius:12px;min-height:40px;background:var(--card)"><button class="btn ghost sm" style="flex:0" onclick="openLink()">ไป</button></div></div>`;
-  if(!S.user){ shell(`<div class="hero"><img src="${HERO}" alt=""><h1>Toast</h1><p class="muted">หิ้วของกลับมาให้ถึงมือ</p></div>${err?`<div class="card" style="border-color:#FCA5A5">${esc(err)}</div>`:''}`+authCard()+linkCard); return; }
-  if(myTripsCache===null){myTripsCache=await store.myTrips(S.user.uid);if(DEMO&&(LS('toast:demoVer')!==3)){if(LSOK)Object.keys(localStorage).filter(k=>/^toast:(trip|items|recent)/.test(k)).forEach(k=>localStorage.removeItem(k));await seedDemo(true);myTripsCache=await store.myTrips(S.user.uid);}for(const t of myTripsCache){const its=await store.getItems(t.id);itemCounts[t.id]=its;}}
+  if(!S.user){ shell(`<div class="hero"><img src="${HERO}" alt=""><h1>Toast</h1><p class="muted">หิ้วของกลับมาให้ถึงมือ</p></div>${err?`<div class="card" style="border-color:#FCA5A5">${esc(err)}</div>`:''}`+authCard()); return; }
+  if(myTripsCache===null){myTripsCache=await store.myTrips(S.user.uid);if(!DEMO&&!myTripsCache.length&&!LS('toast:seeded:'+S.user.uid)){LS('toast:seeded:'+S.user.uid,1);await seedDemo(true);myTripsCache=await store.myTrips(S.user.uid);}
+  if(DEMO&&(LS('toast:demoVer')!==3)){if(LSOK)Object.keys(localStorage).filter(k=>/^toast:(trip|items|recent)/.test(k)).forEach(k=>localStorage.removeItem(k));await seedDemo(true);myTripsCache=await store.myTrips(S.user.uid);}for(const t of myTripsCache){const its=await store.getItems(t.id);itemCounts[t.id]=its;}}
   let body='';
   if(homeTab==='bags')body=bagsView(err,linkCard);
   else if(homeTab==='request')body=requestView(linkCard);
@@ -383,10 +384,11 @@ function bagsView(err,linkCard){
   const lists={future,past,undated};const cur=lists[bagFilter]||[];
   return `<div class="home-head"><img src="${ICON}" alt=""><div style="flex:1"><div class="app">Toast</div><div class="muted">${greet()}<br>วันนี้หิ้วอะไรให้เพื่อนดี</div></div><button class="btn sm" style="width:44px;padding:0;font-size:24px;line-height:1" onclick="openCreate()" aria-label="สร้างกระเป๋า">+</button></div>
    ${err?`<div class="card" style="border-color:#FCA5A5">${esc(err)}</div>`:''}
-   ${now.length?(now.length>1?`<div class="hscroll">${now.map(big).join('')}</div>`:big(now[0])):`<div class="bigcard" style="justify-content:center;text-align:center"><div class="sub">ยังไม่มีกระเป๋าที่กำลังหิ้ว</div><button class="btn soft sm" style="margin:10px auto 0" onclick="event.stopPropagation();openCreate()">+ สร้างกระเป๋า</button>${!myTripsCache.length?`<button class="btn ghost sm" style="margin:8px auto 0" onclick="event.stopPropagation();seedDemo()">ใส่ข้อมูลจำลอง</button>`:''}</div>`}
+   ${now.length?(now.length>1?`<div class="hscroll">${now.map(big).join('')}</div>`:big(now[0])):''}
    <div class="search">${ic('search',18)}<input id="qIn" placeholder="ค้นหากระเป๋า ปลายทาง หรือชื่อของ" value="${esc(S.q||'')}" oninput="S.q=this.value;renderLanding().then(()=>{const e=$('#qIn');e.focus();e.setSelectionRange(e.value.length,e.value.length)})"></div>
    <div class="seg3">${[['future','กำลังจะไป'],['past','ที่ผ่านมา'],['undated','ยังไม่ระบุวัน']].map(([k,l])=>`<button class="${bagFilter===k?'on':''}" onclick="bagFilter='${k}';renderLanding()">${l}</button>`).join('')}</div>
    <div class="card">${cur.length?cur.map(small).join(''):'<div class="empty">ไม่มีกระเป๋าในกลุ่มนี้</div>'}</div>
+   ${now.length?'':`<button class="btn soft block" style="border-radius:14px;min-height:52px" onclick="openCreate()">${ic('plus',18)} สร้างกระเป๋า</button>`}
 `;
 }
 function requestView(linkCard){
@@ -478,13 +480,13 @@ async function seedDemo(silent){
     {requester:'น้ำหวาน',name:'Laneige Lip Sleeping Mask',cat:'เครื่องสำอาง',price:22000,qty:2,shop:'Olive Young Myeongdong',status:'requested'},
     {requester:'ต้น',name:'สาหร่าย Kimnori กล่องใหญ่',cat:'ขนม/อาหาร',price:15000,qty:3,shop:'Lotte Mart Seoul Station',status:'requested'},
   ]);
-  const friend=async(id,name,shopper,currency,items)=>{await store.createTrip({id,name,shopper,ownerUid:'friend-'+id,currency,rate:RATES[currency]||1,start:d(20),end:d(26),createdAt:Date.now(),demo:true,fee:{type:'percent',value:5},note:'ค่าหิ้ว 5% นะจ๊ะ โอนตอนของถึง'});let t=Date.now()-86400e3;for(const it of items){await store.addItem(id,{id:uid(8),requester:S.user.displayName||'ฉัน',photo:'',budget:null,detail:'',mapUrl:'',lat:null,lng:null,fallback:'contact',log:[{s:'requested',at:t}],...it,createdAt:t});t+=3600e3;}
+  const friend=async(id,name,shopper,currency,items)=>{await store.createTrip({id,name,shopper,ownerUid:S.user.uid,demoFriend:true,currency,rate:RATES[currency]||1,start:d(20),end:d(26),createdAt:Date.now(),demo:true,fee:{type:'percent',value:5},note:'ค่าหิ้ว 5% นะจ๊ะ โอนตอนของถึง'});let t=Date.now()-86400e3;for(const it of items){await store.addItem(id,{id:uid(8),requester:S.user.displayName||'ฉัน',photo:'',budget:null,detail:'',mapUrl:'',lat:null,lng:null,fallback:'contact',log:[{s:'requested',at:t}],...it,createdAt:t});t+=3600e3;}
     const recent=(LS('toast:recent')||[]).filter(x=>x.id!==id);recent.unshift({id,name,shopper});LS('toast:recent',recent.slice(0,12));};
-  await friend('demo-f1','London','บอส','GBP',[
+  await friend(uid(),'London','บอส','GBP',[
     {name:'Whittard Earl Grey',cat:'ขนม/อาหาร',price:12,qty:2,shop:'Whittard Covent Garden',status:'found',paid:12},
     {name:'Boots No7 serum',cat:'เครื่องสำอาง',price:28,qty:1,shop:'Boots',status:'requested'},
   ]);
-  await friend('demo-f2','Fukuoka','มายด์','JPY',[
+  await friend(uid(),'Fukuoka','มายด์','JPY',[
     {name:'Hakata Torimon',cat:'ขนม/อาหาร',price:1300,qty:3,shop:'Hakata Station',status:'delivered',paid:1300},
   ]);
   LS('toast:demoVer',3);
