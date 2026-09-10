@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#FFC46B">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Toast — ฝากซื้อกันเอง</title>
+<title>Toast</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,7 +14,7 @@
 <style>
 :root{
   --ink:#4A3417;--ink-2:#8C7148;--line:#F5E4B8;
-  --bg:#FFFBEA;--card:#FFFEF7;--accent:#FFC46B;--accent-deep:#D9903A;--accent-soft:#FEF0C4;--on-accent:#4A3417;
+  --bg:#FEF8D3;--card:rgba(255,255,255,.72);--accent:#FFC46B;--accent-deep:#D9903A;--accent-soft:#FEF0C4;--on-accent:#4A3417;
   --st-requested:#B0B7C3;--st-found:#7BB0F0;--st-packed:#F5C46B;--st-delivered:#6FB584;--st-off:#EF8A8A;
   --r:18px;--pad:16px;
 }
@@ -24,7 +24,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
-body{font-family:Mitr,system-ui,sans-serif;font-weight:300;font-size:16px;line-height:1.5;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;padding-bottom:env(safe-area-inset-bottom)}
+body{font-family:Mitr,system-ui,sans-serif;font-weight:300;font-size:16px;line-height:1.5;color:var(--ink);background:var(--bg) url(bg-app.jpg) center top/cover fixed no-repeat;-webkit-font-smoothing:antialiased;padding-bottom:env(safe-area-inset-bottom)}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer;background:none;border:0}
 h1,h2,h3{font-weight:500;line-height:1.25}
@@ -40,14 +40,14 @@ header.top .title{flex:1}
 header.top .title h1{font-size:22px}
 header.top .title .muted{font-size:13px}
 main{flex:1;padding:8px var(--pad) 90px}
-nav.tabs{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
+nav.tabs{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
 nav.tabs .inner{display:flex;width:100%;max-width:560px}
 nav.tabs button{flex:1;padding:10px 4px 8px;font-size:12px;color:var(--ink-2);display:flex;flex-direction:column;align-items:center;gap:2px}
 nav.tabs button svg{width:24px;height:24px}
 nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 
 /* cards & controls */
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.card{background:var(--card);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 18px;border-radius:999px;background:var(--accent);color:var(--on-accent);font-weight:500;min-height:44px}
 .btn.deep{background:var(--accent-deep);color:#fff}
 .btn.ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink)}
@@ -96,14 +96,15 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 .badges span{min-width:22px;height:22px;padding:0 6px;border-radius:11px;font-size:12px;color:#fff;display:flex;align-items:center;justify-content:center;background:var(--st-requested)}
 
 /* hero (landing) */
-.hero{padding:36px 0 20px;text-align:center}
-.hero img{width:120px;height:120px}
-.hero h1{margin-top:12px}
+body.landing{background-image:url(bg-landing.jpg)}
+body.landing header.top{visibility:hidden}
+.hero{padding:34vh 0 12px;text-align:center}
+.hero h1{margin-top:0}
 .hero p{max-width:32ch;margin:6px auto 0}
 
 /* sheet */
 .sheet-bg{position:fixed;inset:0;background:rgba(58,36,21,.45);display:flex;align-items:flex-end;justify-content:center;z-index:50}
-.sheet{background:var(--bg);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;padding:16px var(--pad) calc(24px + env(safe-area-inset-bottom))}
+.sheet{background:var(--bg) url(bg-app.jpg) center top/cover no-repeat;width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;padding:16px var(--pad) calc(24px + env(safe-area-inset-bottom))}
 .sheet .grip{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 12px}
 .sheet h2{margin-bottom:12px}
 .photo-pick{display:flex;align-items:center;gap:12px}
@@ -134,9 +135,9 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 /* =====================================================================
-   Toast v1.0 — ฝากซื้อกันเอง (single-file PWA)
+   Toast (single-file PWA)
    ===================================================================== */
-const VERSION='1.2';
+const VERSION='1.4';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -190,7 +191,7 @@ function toast(msg){const d=document.createElement('div');d.className='toastmsg'
 async function boot(){
   if(!S.tripId){renderLanding();return;}
   S.trip=await store.getTrip(S.tripId);
-  if(!S.trip){renderLanding('ไม่พบทริปนี้ ลิงค์อาจผิดหรือถูกลบไปแล้ว');return;}
+  if(!S.trip){renderLanding(store.online?'ไม่พบทริปนี้ ลิงค์อาจผิดหรือถูกลบไปแล้ว':'ยังอยู่ในโหมดทดลองในเครื่อง ทริปเห็นได้เฉพาะเบราว์เซอร์ที่สร้าง — ต้องเชื่อม Firebase ก่อนจึงจะแชร์ลิงค์ให้เพื่อนได้');return;}
   const myPin=LS('toast:pin:'+S.tripId);
   if(!S.role){ S.role=(myPin&&myPin===S.trip.pinHash)?'shopper':'requester'; }
   S.me=LS('toast:me')||'';
@@ -204,7 +205,7 @@ function shell(body,tabs){
   $('#app').innerHTML=`
   <header class="top">
     <img class="logo" src="icon-192.png" alt="" style="border-radius:9px">
-    <div class="title"><h1>${esc(S.trip?S.trip.name:'Toast')}</h1><div class="muted">${S.trip?(S.role==='shopper'?'คุณเป็นผู้รับฝาก':'ฝากซื้อกับ '+esc(S.trip.shopper)):'ฝากซื้อกันเอง'}${store.online?'':' · โหมดทดลองในเครื่อง'}</div></div>
+    <div class="title"><h1>${esc(S.trip?S.trip.name:'Toast')}</h1><div class="muted">${S.trip?(S.role==='shopper'?'คุณเป็นผู้รับฝาก':'ฝากซื้อกับ '+esc(S.trip.shopper)):''}${store.online?'':(S.trip?' · ':'')+'โหมดทดลองในเครื่อง'}</div></div>
     <button class="btn ghost sm" onclick="openSettings()" aria-label="ตั้งค่า">⚙︎</button>
   </header>
   <main>${body}</main>
@@ -212,9 +213,10 @@ function shell(body,tabs){
 }
 
 function renderLanding(err){
+  document.body.classList.add('landing');
   const recent=LS('toast:recent')||[];
   shell(`
-    <div class="hero"><img src="icon-512.png" alt="" style="border-radius:26px"><h1>Toast</h1><p class="muted">ฝากซื้อกันเองในกลุ่มเพื่อน หิ้วของกลับมาให้ถึงมือ</p></div>
+    <div class="hero"><h1>Toast</h1><p class="muted">หิ้วของกลับมาให้ถึงมือ</p></div>
     ${err?`<div class="card" style="border-color:#FCA5A5">${esc(err)}</div>`:''}
     <div class="card">
       <h2>เริ่มทริปใหม่ (ผู้รับฝาก)</h2>
@@ -237,7 +239,7 @@ async function createTrip(){
 }
 function openLink(){try{const u=new URL($('#tLink').value.trim());location.href=u.search;}catch{toast('ลิงค์ไม่ถูกต้อง')}}
 
-function render(){ if(!S.trip)return; S.role==='shopper'?renderShopper():renderRequester(); }
+function render(){ if(!S.trip)return; document.body.classList.remove('landing'); S.role==='shopper'?renderShopper():renderRequester(); }
 
 /* --- shopper --- */
 function tabsHTML(){

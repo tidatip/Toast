@@ -1,9 +1,9 @@
 {
-  "name": "Toast — ฝากซื้อกันเอง",
+  "name": "Toast",
   "short_name": "Toast",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#FFFBEA",
+  "background_color": "#FEF8D3",
   "theme_color": "#FFC46B",
   "icons": [
     {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
