@@ -1,1 +1,1 @@
-# Toast v2.2
+# Toast v2.6
