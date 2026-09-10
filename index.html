@@ -104,11 +104,12 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 
 /* hero (landing) */
 body::before{content:'';position:fixed;inset:0;z-index:-1;background:var(--bg) url(bg-app.jpg) center top/cover no-repeat}
-body.landing::before{background-image:url(bg-landing.jpg)}
-body.landing header.top{visibility:hidden}
-.hero{padding:31vh 0 8px;text-align:center}
-.hero h1{margin-top:0}
-.hero p{max-width:32ch;margin:6px auto 0}
+.hero{text-align:center;padding:4px 0 6px}
+.hero img{height:150px;width:auto;display:block;margin:0 auto -6px}
+.hero h1{margin-top:0;font-size:26px}
+.hero p{max-width:32ch;margin:0 auto}
+.landing main{padding-bottom:80px}
+.landing header.top{display:none}
 
 /* sheet */
 .sheet-bg{position:fixed;inset:0;background:rgba(58,36,21,.45);display:flex;align-items:flex-end;justify-content:center;z-index:50}
@@ -141,11 +142,12 @@ body.landing header.top{visibility:hidden}
 <!-- Firebase compat -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='1.6';
+const VERSION='1.9';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -167,14 +169,15 @@ const LS=(k,v)=>v===undefined?JSON.parse(localStorage.getItem(k)||'null'):localS
 const uid=(n=10)=>{const c='abcdefghjkmnpqrstuvwxyz23456789';let s='';crypto.getRandomValues(new Uint8Array(n)).forEach(b=>s+=c[b%c.length]);return s};
 async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 
-let DB=null;
-if(FIREBASE_CONFIG){firebase.initializeApp(FIREBASE_CONFIG);DB=firebase.firestore();try{DB.enablePersistence({synchronizeTabs:true}).catch(()=>{})}catch(e){}}
+let DB=null,AUTH=null;
+if(FIREBASE_CONFIG){firebase.initializeApp(FIREBASE_CONFIG);DB=firebase.firestore();AUTH=firebase.auth();AUTH.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});try{DB.enablePersistence({synchronizeTabs:true}).catch(()=>{})}catch(e){}}
 window.addEventListener('unhandledrejection',e=>{const m=(e.reason&&e.reason.message)||'';if(/permission|firestore|network/i.test(m))toast('Firebase: '+m.slice(0,80))});
 
 const store={
   online:!!DB,
   async createTrip(t){ if(DB){await DB.collection('trips').doc(t.id).set(t);} else {LS('toast:trip:'+t.id,t);LS('toast:items:'+t.id,[]);} },
   async getTrip(id){ if(DB){const d=await DB.collection('trips').doc(id).get();return d.exists?d.data():null;} return LS('toast:trip:'+id); },
+  async myTrips(uid){ if(DB){const s=await DB.collection('trips').where('ownerUid','==',uid).get();return s.docs.map(d=>d.data()).sort((a,b)=>b.createdAt-a.createdAt);} return Object.keys(localStorage).filter(k=>k.startsWith('toast:trip:')).map(k=>LS(k)); },
   async updateTrip(id,patch){ if(DB){await DB.collection('trips').doc(id).update(patch);} else {LS('toast:trip:'+id,{...LS('toast:trip:'+id),...patch});} },
   watchItems(id,cb){
     if(DB){return DB.collection('trips').doc(id).collection('items').orderBy('createdAt').onSnapshot(s=>cb(s.docs.map(d=>({id:d.id,...d.data()}))));}
@@ -188,7 +191,7 @@ const store={
 
 /* ---------- 4. state & routing ---------- */
 const Q=new URLSearchParams(location.search);
-const S={tripId:Q.get('t'),role:Q.get('r')?'requester':null,trip:null,items:[],tab:'people',filter:{cat:'',status:'',shop:'',view:'all'},me:null,pos:null,unsub:null};
+const S={tripId:Q.get('t'),role:Q.get('r')?'requester':null,trip:null,items:[],tab:'people',filter:{cat:'',status:'',shop:'',view:'all'},me:null,pos:null,unsub:null,user:null};
 document.documentElement.dataset.theme=LS('toast:theme')||'tangerine';
 
 const $=(s,el=document)=>el.querySelector(s);
@@ -202,16 +205,46 @@ const initials=n=>(n||'?').trim().slice(0,1).toUpperCase();
 function toast(msg){const d=document.createElement('div');d.className='toastmsg';d.textContent=msg;$('#toasts').append(d);setTimeout(()=>d.remove(),2200)}
 
 /* ---------- 5. boot ---------- */
+const AUTH_ERR={'auth/invalid-email':'ชื่อผู้ใช้ใช้ได้เฉพาะ a-z 0-9 . _ -','auth/user-not-found':'ไม่พบชื่อผู้ใช้นี้','auth/wrong-password':'รหัสผ่านไม่ถูกต้อง','auth/invalid-credential':'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง','auth/email-already-in-use':'ชื่อผู้ใช้นี้มีคนใช้แล้ว','auth/weak-password':'รหัสผ่านต้องอย่างน้อย 6 ตัว','auth/too-many-requests':'ลองผิดหลายครั้ง รอสักครู่','auth/network-request-failed':'เชื่อมต่อไม่ได้'};
+function authMsg(e){return AUTH_ERR[e.code]||('ผิดพลาด: '+(e.code||e.message))}
+function currentUser(){ if(AUTH)return AUTH.currentUser; const u=LS('toast:localUser');return u; }
 async function boot(){
+  if(AUTH){await new Promise(r=>{const off=AUTH.onAuthStateChanged(u=>{S.user=u;off();r()})});AUTH.onAuthStateChanged(u=>{S.user=u;});}
+  else S.user=LS('toast:localUser');
   if(!S.tripId){renderLanding();return;}
   S.trip=await store.getTrip(S.tripId);
   if(!S.trip){renderLanding(store.online?'ไม่พบกระเป๋านี้ ลิงค์อาจผิดหรือถูกลบไปแล้ว':'ยังอยู่ในโหมดทดลองในเครื่อง กระเป๋าเห็นได้เฉพาะเบราว์เซอร์ที่สร้าง — ต้องเชื่อม Firebase ก่อนจึงจะแชร์ลิงค์ให้เพื่อนได้');return;}
-  const myPin=LS('toast:pin:'+S.tripId);
-  if(!S.role){ S.role=(myPin&&myPin===S.trip.pinHash)?'shopper':'requester'; }
+  const isOwner=S.user&&S.trip.ownerUid===S.user.uid;
+  if(!S.role){ S.role=isOwner?'shopper':'requester'; }
+  if(S.role==='shopper'&&!isOwner){ S.role='requester'; }
   S.me=LS('toast:me')||'';
-  const recent=(LS('toast:recent')||[]).filter(x=>x.id!==S.tripId);recent.unshift({id:S.tripId,name:S.trip.name,role:S.role});LS('toast:recent',recent.slice(0,8));
+  if(S.role==='requester'){const recent=(LS('toast:recent')||[]).filter(x=>x.id!==S.tripId);recent.unshift({id:S.tripId,name:S.trip.name,shopper:S.trip.shopper});LS('toast:recent',recent.slice(0,12));}
   S.unsub=store.watchItems(S.tripId,items=>{S.items=items;render()});
   render();
+}
+async function doAuth(mode){
+  const uname=$('#aUser').value.trim().toLowerCase(),pw=$('#aPw').value;
+  if(!uname||!pw){toast('กรอกชื่อผู้ใช้และรหัสผ่าน');return}
+  if(!/^[a-z0-9._-]{3,20}$/.test(uname)){toast('ชื่อผู้ใช้ 3-20 ตัว ใช้ได้เฉพาะ a-z 0-9 . _ -');return}
+  const email=uname+'@toast.app';
+  try{
+    if(!AUTH){const u={uid:'local-'+await sha(email),email,displayName:$('#aName')?$('#aName').value.trim()||uname:uname};LS('toast:localUser',u);S.user=u;renderLanding();return;}
+    if(mode==='register'){const name=$('#aName').value.trim();if(!name){toast('ใส่ชื่อที่เพื่อนจะเห็น');return}const c=await AUTH.createUserWithEmailAndPassword(email,pw);await c.user.updateProfile({displayName:name});S.user=AUTH.currentUser;}
+    else{const c=await AUTH.signInWithEmailAndPassword(email,pw);S.user=c.user;}
+    toast('เข้าสู่ระบบแล้ว');if(S.tripId){location.reload();}else renderLanding();
+  }catch(e){toast(authMsg(e))}
+}
+async function logout(){if(AUTH)await AUTH.signOut();else LS('toast:localUser',null);S.user=null;closeSheet();location.href='./'}
+let authMode='login';
+function authCard(){
+  return `<div class="card">
+    <div class="seg"><button class="${authMode==='login'?'on':''}" onclick="authMode='login';renderLanding()">เข้าสู่ระบบ</button><button class="${authMode==='register'?'on':''}" onclick="authMode='register';renderLanding()">สมัครใหม่</button></div>
+    ${authMode==='register'?`<div class="field"><label>ชื่อที่เพื่อนจะเห็น</label><input id="aName" placeholder="ชื่อเล่น"></div>`:''}
+    <div class="field"><label>ชื่อผู้ใช้</label><input id="aUser" autocapitalize="none" autocomplete="username" placeholder="a-z 0-9 เท่านั้น"></div>
+    <div class="field"><label>รหัสผ่าน</label><input id="aPw" type="password" autocomplete="${authMode==='register'?'new-password':'current-password'}" placeholder="${authMode==='register'?'อย่างน้อย 6 ตัว':''}"></div>
+    <button class="btn block" onclick="doAuth('${authMode}')">${authMode==='register'?'สมัครและเข้าสู่ระบบ':'เข้าสู่ระบบ'}</button>
+    <p class="muted" style="margin-top:10px">ล็อกอินเฉพาะผู้รับฝาก (คนสร้างกระเป๋า) ส่วนเพื่อนที่ฝากซื้อไม่ต้องมีบัญชี</p>
+  </div>`;
 }
 
 /* ---------- 6. views ---------- */
@@ -226,29 +259,42 @@ function shell(body,tabs){
   ${tabs||''}`;
 }
 
-function renderLanding(err){
+let homeTab=LS('toast:homeTab')||'mine';
+let myTripsCache=null;
+async function renderLanding(err){
   document.body.classList.add('landing');
-  shell(`
-    <div class="hero"><h1>Toast</h1><p class="muted">หิ้วของกลับมาให้ถึงมือ</p></div>
-    ${err?`<div class="card" style="border-color:#FCA5A5">${esc(err)}</div>`:''}
-    <div class="card">
-      <h2>สร้างกระเป๋ารับฝาก</h2>
+  const hero=`<div class="hero"><img src="toast-hero.jpg" alt=""><h1>Toast</h1><p class="muted">หิ้วของกลับมาให้ถึงมือ</p></div>${err?`<div class="card" style="border-color:#FCA5A5">${esc(err)}</div>`:''}`;
+  const linkCard=`<div class="card"><h3>ได้ลิงค์จากเพื่อนมา?</h3><div class="row" style="margin-top:8px"><input id="tLink" placeholder="วางลิงค์" style="padding:10px 12px;border:1.5px solid var(--line);border-radius:12px"><button class="btn ghost sm" style="flex:0" onclick="openLink()">ไป</button></div></div>`;
+  const recent=LS('toast:recent')||[];
+  const recentCard=recent.length?`<div class="card"><h3>กระเป๋าที่ฉันฝากไว้</h3>${recent.map(r=>`<div class="item"><div class="thumb">🙋</div><div class="body"><div class="name">${esc(r.name)}</div><div class="meta">ฝากกับ ${esc(r.shopper||'')}</div></div><a class="btn soft sm" href="?t=${r.id}&r=1">เปิด</a></div>`).join('')}</div>`:'';
+  if(!S.user){ shell(hero+authCard()+recentCard+linkCard+`<div class="ver">Toast v${VERSION}</div>`); return; }
+  if(myTripsCache===null){myTripsCache=await store.myTrips(S.user.uid);}
+  if(!myTripsCache.length&&!recent.length&&!err&&homeTab==='mine')homeTab='create';
+  const t=(id,label,svg)=>`<button class="${homeTab===id?'on':''}" onclick="homeTab='${id}';LS('toast:homeTab','${id}');renderLanding()">${svg}<span>${label}</span></button>`;
+  const tabs=`<nav class="tabs"><div class="inner">
+   ${t('mine','กระเป๋าของฉัน','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>')}
+   ${t('create','สร้างกระเป๋า','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>')}
+  </div></nav>`;
+  let body='';
+  if(homeTab==='mine'){
+    body=(myTripsCache.length?`<div class="card"><h3>กระเป๋าที่ฉันรับฝาก</h3>${myTripsCache.map(r=>`<div class="item"><div class="thumb">🧺</div><div class="body"><div class="name">${esc(r.name)}</div><div class="meta">${esc(r.currency||'THB')}</div></div><a class="btn soft sm" href="?t=${r.id}">เปิด</a></div>`).join('')}</div>`:'')
+      +recentCard+(!myTripsCache.length&&!recent.length?emptyState('ยังไม่มีกระเป๋า','สร้างกระเป๋าใหม่ หรือกดลิงค์ที่เพื่อนส่งมา'):'')+linkCard;
+  }else{
+    body=`<div class="card">
       <div class="field"><label>ปลายทาง (ประเทศ / จังหวัด / สถานที่)</label><input id="tName" placeholder="เช่น Tokyo, เชียงใหม่, สยาม"></div>
-      <div class="field"><label>ชื่อของคุณ</label><input id="tShopper" placeholder="ชื่อที่เพื่อนจะเห็น"></div>
       <div class="row"><div class="field"><label>สกุลเงินที่ใช้ซื้อ</label><select id="tCur">${CURS.map(c=>`<option ${c==='JPY'?'selected':''}>${c}</option>`).join('')}</select></div>
-      <div class="field"><label>PIN 4 หลัก</label><input id="tPin" inputmode="numeric" maxlength="6" placeholder="ใช้เข้าหน้าผู้รับฝาก"></div></div>
+      <div class="field"><label>ชื่อผู้รับฝาก</label><input id="tShopper" value="${esc(S.user.displayName||'')}"></div></div>
       <button class="btn block" onclick="createTrip()">สร้างกระเป๋าและรับลิงค์</button>
-    </div>
-    <div class="card"><h3>ได้ลิงค์จากเพื่อนมา?</h3><p class="muted">กดลิงค์ที่เพื่อนส่งให้ได้เลย ไม่ต้องสมัคร หรือวางลิงค์ตรงนี้</p><div class="row" style="margin-top:8px"><input id="tLink" placeholder="วางลิงค์" style="padding:10px 12px;border:1.5px solid var(--line);border-radius:12px"><button class="btn ghost sm" style="flex:0" onclick="openLink()">ไป</button></div></div>
-    <div class="ver">Toast v${VERSION}</div>`);
+    </div>`;
+  }
+  shell(hero+body+`<p class="muted" style="text-align:center">${esc(S.user.displayName||'')} · <button class="btn ghost sm" onclick="logout()">ออกจากระบบ</button></p><div class="ver">Toast v${VERSION}</div>`,tabs);
 }
 async function createTrip(){
-  const name=$('#tName').value.trim(),shopper=$('#tShopper').value.trim(),pin=$('#tPin').value.trim(),currency=$('#tCur').value;
-  if(!name||!shopper||pin.length<4){toast('กรอกปลายทาง ชื่อคุณ และ PIN อย่างน้อย 4 หลัก');return}
-  const id=uid(),pinHash=await sha(pin);
+  const name=$('#tName').value.trim(),shopper=$('#tShopper').value.trim(),currency=$('#tCur').value;
+  if(!name||!shopper){toast('กรอกปลายทางและชื่อผู้รับฝาก');return}
+  const id=uid();
   const rate=await fetchRate(currency);
-  await store.createTrip({id,name,shopper,pinHash,currency,rate,createdAt:Date.now()});
-  LS('toast:pin:'+id,pinHash);
+  try{await store.createTrip({id,name,shopper,ownerUid:S.user.uid,currency,rate,createdAt:Date.now()});}catch(e){toast('สร้างไม่สำเร็จ: '+(e.code||e.message));return}
   location.href=`?t=${id}`;
 }
 function openLink(){try{const u=new URL($('#tLink').value.trim());location.href=u.search;}catch{toast('ลิงค์ไม่ถูกต้อง')}}
@@ -425,14 +471,14 @@ function openSettings(){
   const th=document.documentElement.dataset.theme;const shopper=!S.trip||S.role==='shopper';
   sheet(`<h2>ตั้งค่า</h2>
    ${shopper?`<div class="field"><label>ธีมสี</label><div class="chips"><button class="chip ${th==='tangerine'?'on':''}" onclick="setTheme('tangerine')">🍊 Tangerine</button><button class="chip ${th==='matcha'?'on':''}" onclick="setTheme('matcha')">🍵 Matcha</button></div></div>`:''}
-   ${S.trip&&S.role==='requester'?`<div class="field"><label>คุณคือผู้รับฝากของกระเป๋านี้? ใส่ PIN เพื่อเข้าหน้าผู้รับฝาก</label><div class="row"><input id="pinIn" inputmode="numeric" placeholder="PIN"><button class="btn sm" style="flex:0" onclick="enterPin()">เข้า</button></div></div>`:''}
+   ${S.trip&&S.role==='requester'?`<p class="muted">คุณกำลังดูในฐานะผู้ฝาก${S.user?'':' · ถ้าคุณคือผู้รับฝาก ให้เข้าสู่ระบบที่หน้าแรก'}</p>`:''}
    ${S.trip&&S.role==='shopper'?`<div class="field"><label>สกุลเงิน ${cur()}${cur()!=='THB'?` · อัตรา 1 ${cur()} = THB`:''}</label>${cur()!=='THB'?`<div class="row"><input id="rateIn" inputmode="decimal" value="${S.trip.rate||''}"><button class="btn sm" style="flex:0" onclick="saveRate()">บันทึก</button></div>`:''}</div><a class="btn ghost block" href="?t=${S.tripId}&r=1">ดูหน้าแบบผู้ฝาก</a>`:''}
-   <a class="btn ghost block" style="margin-top:8px" href="./">หน้าแรก / สร้างกระเป๋าใหม่</a>
+   <a class="btn ghost block" style="margin-top:8px" href="./">หน้าแรก</a>
+   ${S.user?`<button class="btn ghost block sm" style="margin-top:8px" onclick="logout()">ออกจากระบบ (${esc((S.user.email||'').split('@')[0])})</button>`:''}
    <div class="ver">Toast v${VERSION} · ${store.online?'เชื่อมต่อ Firebase':'โหมดทดลองในเครื่อง'}</div>`);
 }
 async function saveRate(){const r=+$('#rateIn').value;if(!r)return toast('ใส่อัตราเป็นตัวเลข');await store.updateTrip(S.tripId,{rate:r});S.trip.rate=r;closeSheet();render();toast('บันทึกอัตราแล้ว')}
 function setTheme(t){document.documentElement.dataset.theme=t;LS('toast:theme',t);$('meta[name=theme-color]').content=t==='matcha'?'#C5E1A5':'#FFC46B';openSettings()}
-async function enterPin(){const h=await sha($('#pinIn').value.trim());if(h!==S.trip.pinHash){toast('PIN ไม่ถูกต้อง');return}LS('toast:pin:'+S.tripId,h);location.href=`?t=${S.tripId}`}
 
 /* ---------- 9. PWA ---------- */
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').then(reg=>{reg.addEventListener('updatefound',()=>{const w=reg.installing;w&&w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)w.postMessage('SKIP_WAITING')})})});let refreshed=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!refreshed){refreshed=true;location.reload()}})}
