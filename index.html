@@ -137,11 +137,11 @@ body.landing header.top{visibility:hidden}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='1.4';
+const VERSION='1.5';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
-const FIREBASE_CONFIG=null;
+const FIREBASE_CONFIG={apiKey:"AIzaSyAXqyQ-3Cs-PuB_9t1Aqd1--X-5d166y-Y",authDomain:"toast-aed06.firebaseapp.com",projectId:"toast-aed06",storageBucket:"toast-aed06.firebasestorage.app",messagingSenderId:"261781762430",appId:"1:261781762430:web:3342bf8b33beffa9bf432f"};
 /* ตัวอย่าง
 const FIREBASE_CONFIG={apiKey:"...",authDomain:"toast-xxxx.firebaseapp.com",projectId:"toast-xxxx"};
 */
@@ -159,7 +159,8 @@ const uid=(n=10)=>{const c='abcdefghjkmnpqrstuvwxyz23456789';let s='';crypto.get
 async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 
 let DB=null;
-if(FIREBASE_CONFIG){firebase.initializeApp(FIREBASE_CONFIG);DB=firebase.firestore();try{DB.enablePersistence({synchronizeTabs:true})}catch(e){}}
+if(FIREBASE_CONFIG){firebase.initializeApp(FIREBASE_CONFIG);DB=firebase.firestore();try{DB.enablePersistence({synchronizeTabs:true}).catch(()=>{})}catch(e){}}
+window.addEventListener('unhandledrejection',e=>{const m=(e.reason&&e.reason.message)||'';if(/permission|firestore|network/i.test(m))toast('Firebase: '+m.slice(0,80))});
 
 const store={
   online:!!DB,
