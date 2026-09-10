@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Toast — ฝากซื้อกันเอง</title>
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -203,7 +203,7 @@ async function boot(){
 function shell(body,tabs){
   $('#app').innerHTML=`
   <header class="top">
-    <img class="logo" src="icons/icon-192.png" alt="" style="border-radius:9px">
+    <img class="logo" src="icon-192.png" alt="" style="border-radius:9px">
     <div class="title"><h1>${esc(S.trip?S.trip.name:'Toast')}</h1><div class="muted">${S.trip?(S.role==='shopper'?'คุณเป็นผู้รับฝาก':'ฝากซื้อกับ '+esc(S.trip.shopper)):'ฝากซื้อกันเอง'}${store.online?'':' · โหมดทดลองในเครื่อง'}</div></div>
     <button class="btn ghost sm" onclick="openSettings()" aria-label="ตั้งค่า">⚙︎</button>
   </header>
@@ -214,7 +214,7 @@ function shell(body,tabs){
 function renderLanding(err){
   const recent=LS('toast:recent')||[];
   shell(`
-    <div class="hero"><img src="icons/icon-512.png" alt="" style="border-radius:26px"><h1>Toast</h1><p class="muted">ฝากซื้อกันเองในกลุ่มเพื่อน หิ้วของกลับมาให้ถึงมือ</p></div>
+    <div class="hero"><img src="icon-512.png" alt="" style="border-radius:26px"><h1>Toast</h1><p class="muted">ฝากซื้อกันเองในกลุ่มเพื่อน หิ้วของกลับมาให้ถึงมือ</p></div>
     ${err?`<div class="card" style="border-color:#FCA5A5">${esc(err)}</div>`:''}
     <div class="card">
       <h2>เริ่มทริปใหม่ (ผู้รับฝาก)</h2>
@@ -311,7 +311,7 @@ function renderRequester(){
    ${mine.length?`<div class="card">${mine.map(itemRow).join('')}</div>`:emptyState('ยังไม่มีรายการ','กดปุ่มด้านบนเพื่อฝากของชิ้นแรก')}
    <p class="muted" style="text-align:center">ฝากในชื่อ <b>${esc(S.me)}</b> · <button class="btn ghost sm" onclick="S.me='';LS('toast:me','');render()">เปลี่ยนชื่อ</button></p>`);
 }
-function emptyState(t,s){return `<div class="empty"><img src="icons/icon-192.png" alt="" style="width:64px;height:64px;border-radius:14px;opacity:.7"><div>${esc(t)}</div><div class="muted">${esc(s)}</div></div>`}
+function emptyState(t,s){return `<div class="empty"><img src="icon-192.png" alt="" style="width:64px;height:64px;border-radius:14px;opacity:.7"><div>${esc(t)}</div><div class="muted">${esc(s)}</div></div>`}
 
 /* ---------- 7. sheets ---------- */
 function sheet(html){$('#sheetRoot').innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)closeSheet()"><div class="sheet" role="dialog"><div class="grip"></div>${html}</div></div>`}
