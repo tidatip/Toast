@@ -18,13 +18,20 @@
   --st-requested:#B0B7C3;--st-found:#7BB0F0;--st-packed:#F5C46B;--st-delivered:#6FB584;--st-off:#EF8A8A;
   --r:18px;--pad:16px;
 }
+.approx{font-size:12px;color:var(--ink-2);margin-top:-8px;margin-bottom:10px}
+.money small{font-size:11px;color:var(--ink-2);margin-left:4px}
+.seg{display:flex;background:rgba(255,255,255,.6);border:1.5px solid var(--line);border-radius:999px;padding:3px;margin-bottom:10px}
+.seg button{flex:1;padding:7px;border-radius:999px;font-weight:500;color:var(--ink-2)}
+.seg button.on{background:var(--ink);color:#fff}
+.catpick{display:flex;gap:6px;flex-wrap:wrap}
+.detail-img{display:block;margin:0 auto 12px;max-width:100%;max-height:260px;object-fit:contain;border-radius:16px}
 :root[data-theme=matcha]{
   --ink:#2B3A1D;--ink-2:#6A7D55;--line:#E1EBCB;
   --bg:#F8FBEF;--card:#FDFEF8;--accent:#C5E1A5;--accent-deep:#6B8E3E;--accent-soft:#EAF4D9;--on-accent:#2B3A1D;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
-body{font-family:Mitr,system-ui,sans-serif;font-weight:300;font-size:16px;line-height:1.5;color:var(--ink);background:var(--bg) url(bg-app.jpg) center top/cover fixed no-repeat;-webkit-font-smoothing:antialiased;padding-bottom:env(safe-area-inset-bottom)}
+body{font-family:Mitr,system-ui,sans-serif;font-weight:300;font-size:16px;line-height:1.5;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;padding-bottom:env(safe-area-inset-bottom)}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer;background:none;border:0}
 h1,h2,h3{font-weight:500;line-height:1.25}
@@ -71,7 +78,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 
 /* status */
 .st{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;color:#fff;text-shadow:0 0 2px rgba(0,0,0,.15);background:var(--st-requested);font-weight:400;white-space:nowrap}
-.st.found{background:var(--st-found)}.st.packed{background:var(--st-packed)}.st.delivered{background:var(--st-delivered)}.st.cancelled,.st.notfound{background:var(--st-off)}
+.st.searching{background:var(--st-found)}.st.found{background:var(--st-found)}.st.packed{background:var(--st-packed)}.st.delivered{background:var(--st-delivered)}.st.cancelled,.st.notfound{background:var(--st-off)}
 .steps{display:flex;gap:4px;margin:8px 0}
 .steps span{flex:1;height:6px;border-radius:3px;background:var(--line)}
 .steps span.done{background:var(--accent-deep)}
@@ -96,9 +103,10 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 .badges span{min-width:22px;height:22px;padding:0 6px;border-radius:11px;font-size:12px;color:#fff;display:flex;align-items:center;justify-content:center;background:var(--st-requested)}
 
 /* hero (landing) */
-body.landing{background-image:url(bg-landing.jpg)}
+body::before{content:'';position:fixed;inset:0;z-index:-1;background:var(--bg) url(bg-app.jpg) center top/cover no-repeat}
+body.landing::before{background-image:url(bg-landing.jpg)}
 body.landing header.top{visibility:hidden}
-.hero{padding:34vh 0 12px;text-align:center}
+.hero{padding:31vh 0 8px;text-align:center}
 .hero h1{margin-top:0}
 .hero p{max-width:32ch;margin:6px auto 0}
 
@@ -137,7 +145,7 @@ body.landing header.top{visibility:hidden}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='1.5';
+const VERSION='1.6';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -147,9 +155,10 @@ const FIREBASE_CONFIG={apiKey:"...",authDomain:"toast-xxxx.firebaseapp.com",proj
 */
 
 /* ---------- 2. constants ---------- */
-const STATUS={requested:'ฝากไว้',found:'เจอแล้ว',packed:'ลงกระเป๋าแล้ว',delivered:'ถึงมือแล้ว',cancelled:'ยกเลิก',notfound:'หาไม่ได้'};
-const FLOW=['requested','found','packed','delivered'];
-const CATS=['ขนม/อาหาร','เครื่องสำอาง','เสื้อผ้า','ยา/วิตามิน','ของใช้','ของฝาก','อื่นๆ'];
+const STATUS={requested:'รับฝาก',searching:'กำลังตามหา',found:'เจอแล้ว',packed:'ลงกระเป๋าแล้ว',delivered:'ถึงมือแล้ว',cancelled:'ยกเลิก',notfound:'หาไม่ได้'};
+const FLOW=['requested','searching','found','packed','delivered'];
+const CATS=['ขนม/อาหาร','เครื่องสำอาง','เสื้อผ้า','ยา/วิตามิน','ของใช้'];
+const CURS=['JPY','THB','KRW','USD','EUR','GBP','CNY','TWD','SGD','HKD','MYR','VND','AUD'];
 const FALLBACK={substitute:'ซื้อของทดแทนที่ระบุไว้',contact:'ติดต่อฉันก่อน',cancel:'ยกเลิกรายการนี้ไปเลย'};
 const ICON_SVG=`<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><path d="M22 20c0-9 20-9 20 0" fill="none" stroke="var(--accent-deep)" stroke-width="4" stroke-linecap="round"/><path d="M16 26c-5 0-8 4-6 9 1 2 1 4 1 6v11c0 4 3 7 7 7h28c4 0 7-3 7-7V41c0-2 0-4 1-6 2-5-1-9-6-9-2-6-8-9-16-9s-14 3-16 9z" fill="var(--accent)"/><path d="M20 34h24v20H20z" fill="#FFF4E8" opacity=".85"/></svg>`;
 
@@ -179,12 +188,16 @@ const store={
 
 /* ---------- 4. state & routing ---------- */
 const Q=new URLSearchParams(location.search);
-const S={tripId:Q.get('t'),role:Q.get('r')?'requester':null,trip:null,items:[],tab:'people',filter:{cat:'',status:'',shop:''},me:null,pos:null,unsub:null};
+const S={tripId:Q.get('t'),role:Q.get('r')?'requester':null,trip:null,items:[],tab:'people',filter:{cat:'',status:'',shop:'',view:'all'},me:null,pos:null,unsub:null};
 document.documentElement.dataset.theme=LS('toast:theme')||'tangerine';
 
 const $=(s,el=document)=>el.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmt=n=>n==null||n===''?'':Number(n).toLocaleString('th-TH');
+const fmt=n=>n==null||n===''?'':Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const cur=()=>(S.trip&&S.trip.currency)||'THB';
+const money=(n,small)=>{if(n==null||n==='')return '';const c=cur();let s=`${c} ${fmt(n)}`;if(c!=='THB'&&S.trip&&S.trip.rate)s+=`<small>≈ THB ${fmt(n*S.trip.rate)}</small>`;return `<span class="money">${s}</span>`};
+const approx=(id,tgt)=>{const v=+($('#'+id)||{}).value||0;const el=$('#'+tgt);if(!el)return;el.textContent=(v&&cur()!=='THB'&&S.trip&&S.trip.rate)?`≈ THB ${fmt(v*S.trip.rate)}`:''};
+async function fetchRate(c){if(c==='THB')return 1;try{const r=await fetch('https://open.er-api.com/v6/latest/'+c).then(x=>x.json());return r.rates&&r.rates.THB||null}catch{return null}}
 const initials=n=>(n||'?').trim().slice(0,1).toUpperCase();
 function toast(msg){const d=document.createElement('div');d.className='toastmsg';d.textContent=msg;$('#toasts').append(d);setTimeout(()=>d.remove(),2200)}
 
@@ -192,7 +205,7 @@ function toast(msg){const d=document.createElement('div');d.className='toastmsg'
 async function boot(){
   if(!S.tripId){renderLanding();return;}
   S.trip=await store.getTrip(S.tripId);
-  if(!S.trip){renderLanding(store.online?'ไม่พบทริปนี้ ลิงค์อาจผิดหรือถูกลบไปแล้ว':'ยังอยู่ในโหมดทดลองในเครื่อง ทริปเห็นได้เฉพาะเบราว์เซอร์ที่สร้าง — ต้องเชื่อม Firebase ก่อนจึงจะแชร์ลิงค์ให้เพื่อนได้');return;}
+  if(!S.trip){renderLanding(store.online?'ไม่พบกระเป๋านี้ ลิงค์อาจผิดหรือถูกลบไปแล้ว':'ยังอยู่ในโหมดทดลองในเครื่อง กระเป๋าเห็นได้เฉพาะเบราว์เซอร์ที่สร้าง — ต้องเชื่อม Firebase ก่อนจึงจะแชร์ลิงค์ให้เพื่อนได้');return;}
   const myPin=LS('toast:pin:'+S.tripId);
   if(!S.role){ S.role=(myPin&&myPin===S.trip.pinHash)?'shopper':'requester'; }
   S.me=LS('toast:me')||'';
@@ -215,26 +228,26 @@ function shell(body,tabs){
 
 function renderLanding(err){
   document.body.classList.add('landing');
-  const recent=LS('toast:recent')||[];
   shell(`
     <div class="hero"><h1>Toast</h1><p class="muted">หิ้วของกลับมาให้ถึงมือ</p></div>
     ${err?`<div class="card" style="border-color:#FCA5A5">${esc(err)}</div>`:''}
     <div class="card">
-      <h2>เริ่มทริปใหม่ (ผู้รับฝาก)</h2>
-      <div class="field"><label>ชื่อทริป</label><input id="tName" placeholder="เช่น ญี่ปุ่น ต.ค. 69"></div>
+      <h2>สร้างกระเป๋ารับฝาก</h2>
+      <div class="field"><label>ปลายทาง (ประเทศ / จังหวัด / สถานที่)</label><input id="tName" placeholder="เช่น Tokyo, เชียงใหม่, สยาม"></div>
       <div class="field"><label>ชื่อของคุณ</label><input id="tShopper" placeholder="ชื่อที่เพื่อนจะเห็น"></div>
-      <div class="field"><label>PIN 4 หลัก สำหรับเข้าหน้าผู้รับฝาก</label><input id="tPin" inputmode="numeric" maxlength="6" placeholder="ตั้งเอง ใช้ตอนเปิดในเครื่องอื่น"></div>
-      <button class="btn block" onclick="createTrip()">สร้างทริปและรับลิงค์</button>
+      <div class="row"><div class="field"><label>สกุลเงินที่ใช้ซื้อ</label><select id="tCur">${CURS.map(c=>`<option ${c==='JPY'?'selected':''}>${c}</option>`).join('')}</select></div>
+      <div class="field"><label>PIN 4 หลัก</label><input id="tPin" inputmode="numeric" maxlength="6" placeholder="ใช้เข้าหน้าผู้รับฝาก"></div></div>
+      <button class="btn block" onclick="createTrip()">สร้างกระเป๋าและรับลิงค์</button>
     </div>
-    ${recent.length?`<div class="card"><h3>ทริปล่าสุด</h3>${recent.map(r=>`<div class="item"><div class="body"><div class="name">${esc(r.name)}</div><div class="meta">${r.role==='shopper'?'ผู้รับฝาก':'ผู้ฝาก'}</div></div><a class="btn soft sm" href="?t=${r.id}${r.role==='requester'?'&r=1':''}">เปิด</a></div>`).join('')}</div>`:''}
     <div class="card"><h3>ได้ลิงค์จากเพื่อนมา?</h3><p class="muted">กดลิงค์ที่เพื่อนส่งให้ได้เลย ไม่ต้องสมัคร หรือวางลิงค์ตรงนี้</p><div class="row" style="margin-top:8px"><input id="tLink" placeholder="วางลิงค์" style="padding:10px 12px;border:1.5px solid var(--line);border-radius:12px"><button class="btn ghost sm" style="flex:0" onclick="openLink()">ไป</button></div></div>
     <div class="ver">Toast v${VERSION}</div>`);
 }
 async function createTrip(){
-  const name=$('#tName').value.trim(),shopper=$('#tShopper').value.trim(),pin=$('#tPin').value.trim();
-  if(!name||!shopper||pin.length<4){toast('กรอกชื่อทริป ชื่อคุณ และ PIN อย่างน้อย 4 หลัก');return}
+  const name=$('#tName').value.trim(),shopper=$('#tShopper').value.trim(),pin=$('#tPin').value.trim(),currency=$('#tCur').value;
+  if(!name||!shopper||pin.length<4){toast('กรอกปลายทาง ชื่อคุณ และ PIN อย่างน้อย 4 หลัก');return}
   const id=uid(),pinHash=await sha(pin);
-  await store.createTrip({id,name,shopper,pinHash,createdAt:Date.now()});
+  const rate=await fetchRate(currency);
+  await store.createTrip({id,name,shopper,pinHash,currency,rate,createdAt:Date.now()});
   LS('toast:pin:'+id,pinHash);
   location.href=`?t=${id}`;
 }
@@ -276,21 +289,24 @@ function itemRow(i){
     ${i.photo?`<img class="thumb" src="${i.photo}" alt="">`:`<div class="thumb">🍞</div>`}
     <div class="body">
       <div class="name">${esc(i.name)} <span class="muted">×${i.qty||1}</span></div>
-      <div class="meta">${esc(i.requester)}${i.shop?' · '+esc(i.shop):''}${i.price?' · ฿'+fmt(i.price):''}${i.distKm!=null?' · '+i.distKm.toFixed(1)+' กม.':''}</div>
+      <div class="meta">${esc(i.requester)}${i.shop?' · '+esc(i.shop):''}${i.price?' · '+money(i.price):''}${i.distKm!=null?' · '+i.distKm.toFixed(1)+' กม.':''}</div>
       <div class="steps ${off?'off':''}">${FLOW.map((s,k)=>`<span class="${off?(k===0?'done':''):(k<=stepIdx?'done':'')}"></span>`).join('')}</div>
       <span class="st ${i.status}">${STATUS[i.status]}</span>
     </div></div>`;
 }
 function itemsView(){
   const f=S.filter;const shops=[...new Set(S.items.map(i=>i.shop).filter(Boolean))];
-  let list=S.items.filter(i=>(!f.cat||i.cat===f.cat)&&(!f.status||i.status===f.status)&&(!f.shop||i.shop===f.shop));
+  const offSet=['cancelled','notfound'];
+  let list=S.items.filter(i=>(f.view==='off'?offSet.includes(i.status):!offSet.includes(i.status))&&(!f.cat||i.cat===f.cat)&&(!f.status||i.status===f.status)&&(!f.shop||i.shop===f.shop));
   if(S.pos){list.forEach(i=>{i.distKm=i.lat?haversine(S.pos,i):null});list.sort((a,b)=>(a.distKm??1e9)-(b.distKm??1e9));}
   const chip=(key,val,label)=>`<button class="chip ${f[key]===val?'on':''}" onclick="S.filter.${key}=S.filter.${key}==='${esc(val)}'?'':'${esc(val)}';render()">${esc(label)}</button>`;
+  const nOff=S.items.filter(i=>offSet.includes(i.status)).length;
   return `
-   <div class="chips">${['requested','found','packed','delivered'].map(s=>chip('status',s,STATUS[s])).join('')}${chip('status','cancelled','ยกเลิก/หาไม่ได้')}</div>
+   <div class="seg"><button class="${f.view!=='off'?'on':''}" onclick="S.filter.view='all';S.filter.status='';render()">รายการทั้งหมด</button><button class="${f.view==='off'?'on':''}" onclick="S.filter.view='off';S.filter.status='';render()">ยกเลิก${nOff?' ('+nOff+')':''}</button></div>
+   ${f.view!=='off'?`<div class="chips">${['requested','searching','found'].map(s=>chip('status',s,STATUS[s])).join('')}</div>`:''}
    <div class="chips">${CATS.map(c=>chip('cat',c,c)).join('')}</div>
    ${shops.length?`<div class="chips">${shops.map(s=>chip('shop',s,'📍 '+s)).join('')}</div>`:''}
-   <div class="row" style="margin-bottom:12px"><button class="btn ghost sm" onclick="locateMe()">${S.pos?'📍 เรียงตามระยะแล้ว':'📍 เรียงตามร้านใกล้ฉัน'}</button>${Object.values(f).some(Boolean)?`<button class="btn ghost sm" onclick="S.filter={cat:'',status:'',shop:''};render()">ล้างตัวกรอง</button>`:''}</div>
+   <div class="row" style="margin-bottom:12px"><button class="btn ghost sm" onclick="locateMe()">${S.pos?'📍 เรียงตามระยะแล้ว':'📍 เรียงตามร้านใกล้ฉัน'}</button>${(f.cat||f.status||f.shop)?`<button class="btn ghost sm" onclick="S.filter.cat='';S.filter.status='';S.filter.shop='';render()">ล้างตัวกรอง</button>`:''}</div>
    <div class="card">${list.length?list.map(itemRow).join(''):'<div class="empty">ไม่มีรายการตรงตัวกรอง</div>'}</div>`;
 }
 function haversine(a,b){const R=6371,d=x=>x*Math.PI/180;const dl=d(b.lat-a.lat),dg=d(b.lng-a.lng);const h=Math.sin(dl/2)**2+Math.cos(d(a.lat))*Math.cos(d(b.lat))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
@@ -300,8 +316,8 @@ function shareView(){
   const sum={};S.items.filter(i=>['found','packed','delivered'].includes(i.status)).forEach(i=>sum[i.requester]=(sum[i.requester]||0)+(Number(i.paid||i.price)||0)*(Number(i.qty)||1));
   return `<div class="card"><h2>ลิงค์สำหรับผู้ฝาก</h2><p class="muted">ส่งเข้ากลุ่ม เพื่อนกดแล้วกรอกได้เลย ไม่ต้องสมัคร</p>
      <div class="share" style="margin:10px 0"><code>${esc(link)}</code><button class="btn sm" onclick="copyLink('${link}')">คัดลอก</button></div>
-     ${navigator.share?`<button class="btn block ghost" onclick="navigator.share({title:'ฝากซื้อกับ ${esc(S.trip.shopper)}',url:'${link}'})">แชร์…</button>`:''}</div>
-    <div class="card"><h2>ยอดที่ซื้อแล้ว (ประมาณ)</h2>${Object.keys(sum).length?Object.entries(sum).map(([n,v])=>`<div class="item"><div class="body"><div class="name">${esc(n)}</div></div><div>฿${fmt(v)}</div></div>`).join(''):'<p class="muted">ยังไม่มีของที่ซื้อแล้ว</p>'}<p class="muted" style="margin-top:8px">คิดจากราคาจริงที่กรอกตอนเปลี่ยนสถานะ ถ้าไม่กรอกจะใช้ราคาที่ผู้ฝากระบุ</p></div>`;
+     ${navigator.share?`<button class="btn block ghost" onclick="navigator.share({title:'ฝากซื้อกับ ${esc(S.trip.shopper)} · ${esc(S.trip.name)}',url:'${link}'})">แชร์…</button>`:''}</div>
+    <div class="card"><h2>ยอดที่ซื้อแล้ว (ประมาณ)</h2>${Object.keys(sum).length?Object.entries(sum).map(([n,v])=>`<div class="item"><div class="body"><div class="name">${esc(n)}</div></div><div>${money(v)}</div></div>`).join(''):'<p class="muted">ยังไม่มีของที่ซื้อแล้ว</p>'}<p class="muted" style="margin-top:8px">สกุลเงิน ${cur()}${cur()!=='THB'&&S.trip.rate?` · อัตราประมาณ 1 ${cur()} = ${S.trip.rate.toFixed(4)} THB`:''} · คิดจากราคาจริงที่กรอกตอนเปลี่ยนสถานะ ถ้าไม่กรอกจะใช้ราคาที่ผู้ฝากระบุ</p></div>`;
 }
 function copyLink(l){navigator.clipboard.writeText(l).then(()=>toast('คัดลอกลิงค์แล้ว'))}
 
@@ -328,9 +344,9 @@ function openItemForm(){
    ${asShopper?`<div class="field"><label>ชื่อผู้ฝาก</label><input id="fWho" placeholder="เพื่อนคนไหน"></div>`:''}
    <div class="field"><label>รูปสินค้า</label><div class="photo-pick"><img id="fImg" alt=""><label class="btn ghost sm">เลือกรูป<input type="file" accept="image/*" hidden onchange="pickPhoto(this,'fImg','main')"></label></div></div>
    <div class="field"><label>ชื่อสินค้า</label><input id="fName" placeholder="เช่น Kit Kat รสชาเขียว"></div>
-   <div class="row"><div class="field"><label>ราคาที่เห็น (฿)</label><input id="fPrice" inputmode="decimal"></div><div class="field"><label>จำนวน</label><input id="fQty" inputmode="numeric" value="1"></div></div>
-   <div class="field"><label>งบไม่เกิน (฿) ถ้าราคาต่างจากที่เห็น</label><input id="fBudget" inputmode="decimal" placeholder="เว้นว่างได้"></div>
-   <div class="field"><label>ประเภท</label><select id="fCat">${CATS.map(c=>`<option>${c}</option>`).join('')}</select></div>
+   <div class="row"><div class="field"><label>ราคาที่เห็น (${cur()})</label><input id="fPrice" inputmode="decimal" oninput="approx('fPrice','aPrice')"><div class="approx" id="aPrice" style="margin-top:2px"></div></div><div class="field"><label>จำนวน</label><input id="fQty" inputmode="numeric" value="1"></div></div>
+   <div class="field"><label>งบไม่เกิน (${cur()}) ถ้าราคาต่างจากที่เห็น</label><input id="fBudget" inputmode="decimal" placeholder="เว้นว่างได้" oninput="approx('fBudget','aBudget')"><div class="approx" id="aBudget" style="margin-top:2px"></div></div>
+   <div class="field"><label>ประเภท</label><div class="catpick" id="fCatPick">${CATS.map((c,i)=>`<button type="button" class="chip ${i===0?'on':''}" onclick="pickCat(this)">${c}</button>`).join('')}</div></div>
    <div class="field"><label>รายละเอียด / จุดสังเกต</label><textarea id="fDetail" placeholder="สี ขนาด รุ่น ห้ามซื้อแบบไหน"></textarea></div>
    <div class="field"><label>ร้าน</label><input id="fShop" placeholder="ชื่อร้าน / สาขา"></div>
    <div class="field"><label>ตำแหน่งร้าน</label><div class="row"><input id="fLoc" placeholder="วางลิงค์ Google Maps"><button class="btn ghost sm" style="flex:0;white-space:nowrap" onclick="useHere()">ตรงนี้</button></div></div>
@@ -340,12 +356,13 @@ function openItemForm(){
      <h3>ของทดแทน</h3>
      <div class="field"><label>รูป</label><div class="photo-pick"><img id="sImg" alt=""><label class="btn ghost sm">เลือกรูป<input type="file" accept="image/*" hidden onchange="pickPhoto(this,'sImg','sub')"></label></div></div>
      <div class="field"><label>ชื่อสินค้า</label><input id="sName"></div>
-     <div class="row"><div class="field"><label>ราคา (฿)</label><input id="sPrice" inputmode="decimal"></div><div class="field"><label>จำนวน</label><input id="sQty" inputmode="numeric" value="1"></div></div>
+     <div class="row"><div class="field"><label>ราคา (${cur()})</label><input id="sPrice" inputmode="decimal" oninput="approx('sPrice','aSPrice')"><div class="approx" id="aSPrice" style="margin-top:2px"></div></div><div class="field"><label>จำนวน</label><input id="sQty" inputmode="numeric" value="1"></div></div>
      <div class="field"><label>รายละเอียด</label><textarea id="sDetail"></textarea></div>
      <div class="field"><label>ร้าน</label><input id="sShop"></div>
    </div>
    <button class="btn block" onclick="saveItem()">ฝากซื้อ</button>`);
 }
+function pickCat(b){[...b.parentNode.children].forEach(x=>x.classList.remove('on'));b.classList.add('on')}
 function pickPhoto(inp,imgId,which){
   const f=inp.files[0];if(!f)return;const r=new FileReader();
   r.onload=()=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');const s=Math.min(1,720/Math.max(im.width,im.height));c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);const d=c.toDataURL('image/jpeg',.6);which==='main'?photoData=d:subPhotoData=d;$('#'+imgId).src=d;};im.src=r.result;};
@@ -364,7 +381,7 @@ async function saveItem(){
   if(photoData.length>900000){toast('รูปใหญ่เกินไป ลองรูปอื่น');return}
   const loc=parseLoc($('#fLoc').value)||{};
   const fb=$('input[name=fb]:checked').value;
-  const it={id:uid(8),requester:who,name,photo:photoData,price:+$('#fPrice').value||null,budget:+$('#fBudget').value||null,qty:+$('#fQty').value||1,cat:$('#fCat').value,detail:$('#fDetail').value.trim(),shop:$('#fShop').value.trim(),lat:loc.lat??null,lng:loc.lng??null,mapUrl:loc.mapUrl||'',fallback:fb,status:'requested',log:[{s:'requested',at:Date.now()}]};
+  const it={id:uid(8),requester:who,name,photo:photoData,price:+$('#fPrice').value||null,budget:+$('#fBudget').value||null,qty:+$('#fQty').value||1,cat:($('#fCatPick .on')||{}).textContent||CATS[0],detail:$('#fDetail').value.trim(),shop:$('#fShop').value.trim(),lat:loc.lat??null,lng:loc.lng??null,mapUrl:loc.mapUrl||'',fallback:fb,status:'requested',log:[{s:'requested',at:Date.now()}]};
   if(fb==='substitute')it.substitute={name:$('#sName').value.trim(),photo:subPhotoData,price:+$('#sPrice').value||null,qty:+$('#sQty').value||1,detail:$('#sDetail').value.trim(),shop:$('#sShop').value.trim()};
   await store.addItem(S.tripId,it);closeSheet();toast('ฝากแล้ว 🍞');
 }
@@ -373,23 +390,23 @@ function openItem(id){
   const i=S.items.find(x=>x.id===id);if(!i)return;
   const isShopper=S.role==='shopper';const off=['cancelled','notfound'].includes(i.status);
   const next=FLOW[FLOW.indexOf(i.status)+1];
-  const sub=i.substitute&&i.substitute.name?`<div class="card"><h3>ของทดแทนถ้าหาไม่เจอ</h3><div class="item">${i.substitute.photo?`<img class="thumb" src="${i.substitute.photo}">`:'<div class="thumb">🔁</div>'}<div class="body"><div class="name">${esc(i.substitute.name)} <span class="muted">×${i.substitute.qty}</span></div><div class="meta">${i.substitute.price?'฿'+fmt(i.substitute.price)+' · ':''}${esc(i.substitute.shop||'')}</div><div class="muted">${esc(i.substitute.detail||'')}</div></div></div></div>`:'';
+  const sub=i.substitute&&i.substitute.name?`<div class="card"><h3>ของทดแทนถ้าหาไม่เจอ</h3><div class="item">${i.substitute.photo?`<img class="thumb" src="${i.substitute.photo}">`:'<div class="thumb">🔁</div>'}<div class="body"><div class="name">${esc(i.substitute.name)} <span class="muted">×${i.substitute.qty}</span></div><div class="meta">${i.substitute.price?money(i.substitute.price)+' · ':''}${esc(i.substitute.shop||'')}</div><div class="muted">${esc(i.substitute.detail||'')}</div></div></div></div>`:'';
   sheet(`
-   ${i.photo?`<img src="${i.photo}" style="width:100%;max-height:260px;object-fit:cover;border-radius:16px;margin-bottom:12px" alt="">`:''}
+   ${i.photo?`<img class="detail-img" src="${i.photo}" alt="">`:''}
    <h2>${esc(i.name)} <span class="muted">×${i.qty}</span></h2>
    <p class="muted">ฝากโดย ${esc(i.requester)} · ${esc(i.cat)}</p>
    <div style="margin:8px 0"><span class="st ${i.status}">${STATUS[i.status]}</span></div>
    <div class="card">
-     ${i.price?`<div>ราคาที่เห็น ฿${fmt(i.price)}${i.budget?` · งบไม่เกิน ฿${fmt(i.budget)}`:''}</div>`:''}
+     ${i.price?`<div>ราคาที่เห็น ${money(i.price)}${i.budget?`<br>งบไม่เกิน ${money(i.budget)}`:''}</div>`:''}
      ${i.detail?`<div style="margin-top:4px">${esc(i.detail)}</div>`:''}
      ${i.shop||i.mapUrl?`<div class="meta" style="margin-top:6px">📍 ${esc(i.shop||'ร้าน')} ${i.mapUrl?`<a href="${esc(i.mapUrl)}" target="_blank" rel="noopener">เปิดแผนที่</a>`:''}</div>`:''}
      <div class="muted" style="margin-top:6px">ถ้าหาไม่เจอ: ${FALLBACK[i.fallback]}</div>
    </div>
    ${sub}
-   ${i.paid?`<p class="muted">ซื้อจริง ฿${fmt(i.paid)}</p>`:''}
+   ${i.paid?`<p class="muted">ซื้อจริง ${money(i.paid)}</p>`:''}
    ${i.note?`<p class="muted">หมายเหตุจากผู้รับฝาก: ${esc(i.note)}</p>`:''}
    <ul class="timeline">${(i.log||[]).map(l=>`<li>${STATUS[l.s]} · ${new Date(l.at).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'})}</li>`).join('')}</ul>
-   ${isShopper&&!off&&next?`<div style="margin-top:14px">${i.status==='requested'?`<div class="field"><label>ราคาที่ซื้อจริง (฿) — ใส่หรือไม่ก็ได้</label><input id="uPaid" inputmode="decimal" value="${i.paid||''}"></div>`:''}<button class="btn block" onclick="setStatus('${i.id}','${next}')">${next==='delivered'?'🥂 ':''}→ ${STATUS[next]}</button></div>`:''}
+   ${isShopper&&!off&&next?`<div style="margin-top:14px">${['requested','searching'].includes(i.status)?`<div class="field"><label>ราคาที่ซื้อจริง (${cur()}) — ใส่หรือไม่ก็ได้</label><input id="uPaid" inputmode="decimal" value="${i.paid||''}" oninput="approx('uPaid','aPaid')"><div class="approx" id="aPaid" style="margin-top:2px"></div></div>`:''}<button class="btn block" onclick="setStatus('${i.id}','${next}')">${next==='delivered'?'🥂 ':''}→ ${STATUS[next]}</button></div>`:''}
    ${isShopper&&!off?`<div class="row" style="margin-top:8px"><button class="btn danger" onclick="setStatus('${i.id}','notfound')">หาไม่ได้</button><button class="btn ghost" onclick="setStatus('${i.id}','cancelled')">ยกเลิก</button></div>`:''}
    ${isShopper&&off?`<button class="btn ghost block" style="margin-top:8px" onclick="setStatus('${i.id}','requested')">เปิดรายการใหม่</button>`:''}
    ${!isShopper&&i.status==='requested'?`<button class="btn danger block" style="margin-top:14px" onclick="setStatus('${i.id}','cancelled')">ยกเลิกรายการนี้</button>`:''}
@@ -405,14 +422,15 @@ async function setStatus(id,s){
 
 /* ---------- 8. settings ---------- */
 function openSettings(){
-  const th=document.documentElement.dataset.theme;
+  const th=document.documentElement.dataset.theme;const shopper=!S.trip||S.role==='shopper';
   sheet(`<h2>ตั้งค่า</h2>
-   <div class="field"><label>ธีมสี</label><div class="chips"><button class="chip ${th==='tangerine'?'on':''}" onclick="setTheme('tangerine')">🍊 Tangerine</button><button class="chip ${th==='matcha'?'on':''}" onclick="setTheme('matcha')">🍵 Matcha</button></div></div>
-   ${S.trip&&S.role==='requester'?`<div class="field"><label>คุณคือผู้รับฝากของทริปนี้? ใส่ PIN เพื่อเข้าหน้าผู้รับฝาก</label><div class="row"><input id="pinIn" inputmode="numeric" placeholder="PIN"><button class="btn sm" style="flex:0" onclick="enterPin()">เข้า</button></div></div>`:''}
-   ${S.trip&&S.role==='shopper'?`<a class="btn ghost block" href="?t=${S.tripId}&r=1">ดูหน้าแบบผู้ฝาก</a>`:''}
-   <a class="btn ghost block" style="margin-top:8px" href="./">หน้าแรก / ทริปอื่น</a>
-   <div class="ver">Toast v${VERSION} · ${store.online?'เชื่อมต่อ Firebase':'โหมดทดลองในเครื่อง — ใส่ FIREBASE_CONFIG เพื่อใช้ร่วมกับเพื่อน'}</div>`);
+   ${shopper?`<div class="field"><label>ธีมสี</label><div class="chips"><button class="chip ${th==='tangerine'?'on':''}" onclick="setTheme('tangerine')">🍊 Tangerine</button><button class="chip ${th==='matcha'?'on':''}" onclick="setTheme('matcha')">🍵 Matcha</button></div></div>`:''}
+   ${S.trip&&S.role==='requester'?`<div class="field"><label>คุณคือผู้รับฝากของกระเป๋านี้? ใส่ PIN เพื่อเข้าหน้าผู้รับฝาก</label><div class="row"><input id="pinIn" inputmode="numeric" placeholder="PIN"><button class="btn sm" style="flex:0" onclick="enterPin()">เข้า</button></div></div>`:''}
+   ${S.trip&&S.role==='shopper'?`<div class="field"><label>สกุลเงิน ${cur()}${cur()!=='THB'?` · อัตรา 1 ${cur()} = THB`:''}</label>${cur()!=='THB'?`<div class="row"><input id="rateIn" inputmode="decimal" value="${S.trip.rate||''}"><button class="btn sm" style="flex:0" onclick="saveRate()">บันทึก</button></div>`:''}</div><a class="btn ghost block" href="?t=${S.tripId}&r=1">ดูหน้าแบบผู้ฝาก</a>`:''}
+   <a class="btn ghost block" style="margin-top:8px" href="./">หน้าแรก / สร้างกระเป๋าใหม่</a>
+   <div class="ver">Toast v${VERSION} · ${store.online?'เชื่อมต่อ Firebase':'โหมดทดลองในเครื่อง'}</div>`);
 }
+async function saveRate(){const r=+$('#rateIn').value;if(!r)return toast('ใส่อัตราเป็นตัวเลข');await store.updateTrip(S.tripId,{rate:r});S.trip.rate=r;closeSheet();render();toast('บันทึกอัตราแล้ว')}
 function setTheme(t){document.documentElement.dataset.theme=t;LS('toast:theme',t);$('meta[name=theme-color]').content=t==='matcha'?'#C5E1A5':'#FFC46B';openSettings()}
 async function enterPin(){const h=await sha($('#pinIn').value.trim());if(h!==S.trip.pinHash){toast('PIN ไม่ถูกต้อง');return}LS('toast:pin:'+S.tripId,h);location.href=`?t=${S.tripId}`}
 
