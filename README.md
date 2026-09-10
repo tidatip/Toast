@@ -1,4 +1,4 @@
-# Toast v1.2 — ฝากซื้อกันเอง
+# Toast v1.2
 
 ## ไฟล์
 index.html · sw.js · manifest.json · icons/ · firestore.rules
