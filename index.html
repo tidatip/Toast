@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#FFC46B">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -78,19 +78,28 @@ body.login::before{background-image:url(bg-login.jpg);background-position:center
 .ic{vertical-align:-3px;flex:none}
 .fab{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));display:flex;justify-content:center;pointer-events:none;z-index:5}
 .fab .btn{pointer-events:auto;max-width:560px;width:calc(100% - 32px);box-shadow:0 4px 14px rgba(58,36,21,.12)}
+.fab .card{pointer-events:auto;max-width:560px;width:calc(100% - 32px);margin:0;box-shadow:0 4px 14px rgba(58,36,21,.12)}
+.swipe{position:relative;overflow:hidden}
+.swipe .del{position:absolute;right:0;top:0;bottom:0;width:84px;background:#FEE2E2;color:#B91C1C;display:flex;align-items:center;justify-content:center;font-weight:500}
+.swipe .row{position:relative;background:#FFFEF7;transition:transform .2s}
+:root[data-mode=dark] .swipe .row{background:#2A241B}
+.swipe .del{z-index:0}
+.swipe.open .row{transform:translateX(-84px)}
+.selbox{width:22px;height:22px;margin-right:10px;flex:none}
 main.hasfab{padding-bottom:150px}
 .approx{font-size:12px;color:var(--ink-2);margin:2px 0 0;min-height:0}
 .money small{font-size:11px;color:var(--ink-2);margin-left:4px}
 .seg{display:flex;background:rgba(255,255,255,.6);border:1.5px solid var(--line);border-radius:999px;padding:3px;margin-bottom:10px}
 .seg button{flex:1;padding:7px;border-radius:999px;font-weight:500;color:var(--ink-2)}
 .seg button.on{background:var(--ink);color:#fff}
-.catpick{display:flex;gap:6px;flex-wrap:nowrap;overflow:hidden}.catpick .chip{white-space:nowrap;padding:6px 10px;font-size:14px}
+.catpick{display:flex;gap:5px;flex-wrap:nowrap}.catpick .chip{white-space:nowrap;padding:5px 8px;font-size:13px;min-height:32px;flex:1;text-align:center}
 .detail-img{display:block;margin:0 auto 12px;max-width:100%;max-height:260px;object-fit:contain;border-radius:16px}
 :root[data-theme=matcha]{
   --ink:#2B3A1D;--ink-2:#6A7D55;--line:#E1EBCB;
   --bg:#F8FBEF;--card:#FDFEF8;--accent:#C5E1A5;--accent-deep:#6B8E3E;--accent-soft:#EAF4D9;--on-accent:#2B3A1D;
 }
 *{box-sizing:border-box;margin:0;padding:0}
+html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 html,body{height:100%}
 html{--font-head:Chonburi,'Yeseva One',serif;--font-body:Prompt,'Hind Siliguri',system-ui,sans-serif}
 html[data-lang=en]{--font-head:'Yeseva One',Chonburi,serif;--font-body:'Hind Siliguri',Prompt,system-ui,sans-serif}
@@ -140,6 +149,16 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 .radio{display:flex;gap:8px;align-items:flex-start;padding:10px;border:1.5px solid var(--line);border-radius:12px;margin-bottom:8px;cursor:pointer}
 .radio input{margin-top:5px}
 .radio b{font-weight:500;display:block}
+.opts{background:var(--card);border:1px solid var(--line);border-radius:var(--r);margin-bottom:12px}
+.opt{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--line);cursor:pointer;min-height:48px}
+.opt:first-child{border-top:0}
+.opt input{position:absolute;opacity:0;width:0;height:0}
+.opt .ring{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--ink-2);flex:none;display:flex;align-items:center;justify-content:center;color:var(--on-accent)}
+.opt input:checked+.ring{background:var(--accent);border-color:var(--accent)}
+.opt input:checked+.ring svg{display:block}
+.opt .ring svg{display:none}
+.opt .lbl{flex:1;font-weight:400}
+.optsub{padding:0 14px 12px 48px;border-top:0}
 
 /* status */
 .st{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;color:#fff;text-shadow:0 0 2px rgba(0,0,0,.15);background:var(--st-requested);font-weight:400;white-space:nowrap}
@@ -179,11 +198,11 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:var(--bg) u
 .sheet{background:var(--bg) url(bg-app.jpg) center top/cover no-repeat;width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;padding:16px var(--pad) calc(24px + env(safe-area-inset-bottom))}
 .sheet .grip{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 12px}
 .sheet h2{margin-bottom:12px}
-.photobox{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:100%;min-height:120px;border:2px dashed var(--line);border-radius:14px;background:var(--card);color:var(--ink-2);cursor:pointer;overflow:hidden;position:relative}
+.field .photobox,.photobox{display:grid!important;place-items:center;width:100%;height:130px;margin:0;font-size:14px;border:2px dashed var(--line);border-radius:14px;background:var(--card);color:var(--ink-2);cursor:pointer;overflow:hidden;position:relative}
 .photobox img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
 .photobox.has img{display:block}
 .photobox.has .ph{display:none}
-.photobox .ph{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:14px}
+.photobox .ph{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:14px;text-align:center}
 
 /* toast (of course) */
 #toasts{position:fixed;top:12px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:99;pointer-events:none}
@@ -213,7 +232,7 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:var(--bg) u
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='2.7';
+const VERSION='2.9';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -225,8 +244,7 @@ const FIREBASE_CONFIG={apiKey:"...",authDomain:"toast-xxxx.firebaseapp.com",proj
 /* ---------- 2. constants ---------- */
 const STATUS={requested:'รับฝาก',searching:'กำลังตามหา',found:'เจอแล้ว',packed:'ลงกระเป๋าแล้ว',delivered:'ถึงมือแล้ว',cancelled:'ยกเลิก',notfound:'หาไม่ได้'};
 const FLOW=['requested','searching','found','packed','delivered'];
-const CATS=['ขนม','เครื่องสำอาง','เสื้อผ้า','ยา'];
-const CATS_MORE=['ของใช้','ของเล่น','อิเล็กทรอนิกส์','แฟชั่น/กระเป๋า','ของสะสม'];
+const CATS=['ของกิน','เครื่องสำอาง','เสื้อผ้า','ของใช้','ยา/วิตามิน'];
 const ICON='icon-192.png';
 const HERO='';
 const IC={
@@ -369,7 +387,7 @@ function authCard(){
 function shell(body,tabs){
   $('#app').innerHTML=`
   <header class="top">
-    <img class="logo" src="${ICON}" alt="" style="border-radius:9px">
+    ${S.trip?`<button class="btn ghost sm" style="width:40px;padding:0" onclick="goHome()" aria-label="กลับ">${ic('chev',20,'style="transform:rotate(90deg)"')}</button>`:`<img class="logo" src="${ICON}" alt="" style="border-radius:9px">`}
     <div class="title"><h1>${esc(S.trip?S.trip.name:'Toast')}</h1><div class="muted">${S.trip?(S.role==='shopper'?'คุณเป็นผู้รับฝาก':'ฝากซื้อกับ '+esc(S.trip.shopper))+(S.trip.recv?' · รับของ '+dfmt(S.trip.recv):''):''}${store.online?'':(S.trip?' · ':'')+(DEMO?'โหมดตัวอย่าง':'โหมดทดลองในเครื่อง')}</div></div>
     <button class="btn ghost sm" style="width:40px;padding:0" onclick="openSettings()" aria-label="ตั้งค่า">${ic('gear',20)}</button>
   </header>
@@ -407,6 +425,7 @@ async function renderLanding(err){
   else if(homeTab==='friends')body=friendsView();
   else body=profileView();
   shell(body,homeTabs());
+  const mm=$('main');if(mm)mm.classList.toggle('hasfab',homeTab==='request');
   if(homeTab==='profile')$('#avIn')&&($('#avIn').onchange=e=>pickAvatar(e.target));
 }
 let refreshing=false;
@@ -454,12 +473,23 @@ function bagsView(err,linkCard){
    ${now.length?'':`<button class="btn soft block" style="border-radius:14px;min-height:52px" onclick="openCreate()">${ic('plus',18)} สร้างกระเป๋า</button>`}
 `;
 }
+let reqSel=null;
 function requestView(linkCard){
-  const recent=S.myReq||LS('toast:recent')||[];
-  return `<div class="home-head"><img src="${ICON}" alt=""><div><div class="app">ฝากซื้อ</div><div class="muted">กระเป๋าของเพื่อนที่ฉันฝากของไว้</div></div></div>
-   ${recent.length?`<div class="card">${recent.map(r=>`<div class="smallcard" onclick="location.href='?t=${r.id}&r=1'"><div><div class="n">${esc(r.name)}</div><div class="m">ฝากกับ ${esc(r.shopper||'')}${r.recv?' · รับของ '+dfmt(r.recv):''}</div></div><span class="pill">${r.inApp?'ส่งมาให้':'ดูรายการ'}</span></div>`).join('')}</div>`:emptyState('ยังไม่ได้ฝากซื้อกับใคร','กดลิงค์ที่เพื่อนส่งมา หรือวางลิงค์ด้านล่าง')}
-   ${linkCard}`;
+  const hidden=new Set(LS('toast:hiddenReq')||[]);
+  const recent=(S.myReq||LS('toast:recent')||[]).filter(r=>!hidden.has(r.id));
+  const today=todayStr();
+  const done=r=>r.recv&&r.recv<today;
+  const row=r=>`<div class="swipe" data-id="${r.id}"><div class="del" onclick="hideReq('${r.id}')">ลบ</div><div class="row smallcard" onclick="${reqSel?`toggleSel('${r.id}')`:`location.href='?t=${r.id}&r=1'`}">${reqSel?`<input type="checkbox" class="selbox" ${reqSel.has(r.id)?'checked':''} onclick="event.stopPropagation();toggleSel('${r.id}')">`:''}<div style="flex:1"><div class="n">${esc(r.name)}</div><div class="m">ฝากกับ ${esc(r.shopper||'')}${r.recv?' · รับของ '+dfmt(r.recv):''}</div></div><span class="pill">${done(r)?'ได้ของแล้ว':(r.inApp?'ส่งมาให้':'ดูรายการ')}</span></div></div>`;
+  setTimeout(bindSwipes,0);
+  return `<div class="home-head"><img src="${ICON}" alt=""><div style="flex:1"><div class="app">ฝากซื้อ</div><div class="muted">กระเป๋าเพื่อนที่ฉันฝากไว้</div></div>${recent.length?`<button class="btn ghost sm" onclick="reqSel=reqSel?null:new Set();renderLanding()">${reqSel?'เสร็จ':'เลือก'}</button>`:''}</div>
+   ${reqSel&&reqSel.size?`<button class="btn danger block" style="margin-bottom:10px" onclick="hideSelected()">ลบ ${reqSel.size} รายการ</button>`:''}
+   ${recent.length?`<div class="card" style="padding:4px 14px">${recent.map(row).join('')}</div><p class="muted" style="text-align:center;font-size:12px">เลื่อนซ้ายเพื่อลบออกจากรายการ</p>`:emptyState('ยังไม่ได้ฝากซื้อกับใคร','กดลิงค์ที่เพื่อนส่งมา หรือวางลิงค์ด้านล่าง')}
+   <div class="fab">${linkCard.replace('class="card"','class="card" style="padding:10px 14px"')}</div>`;
 }
+function bindSwipes(){document.querySelectorAll('.swipe').forEach(el=>{let x0=null;el.ontouchstart=e=>{x0=e.touches[0].clientX};el.ontouchmove=e=>{if(x0===null)return;const dx=e.touches[0].clientX-x0;if(dx<-40){el.classList.add('open');document.querySelectorAll('.swipe.open').forEach(o=>{if(o!==el)o.classList.remove('open')})}else if(dx>20)el.classList.remove('open')};el.ontouchend=()=>{x0=null}})}
+function hideReq(id){const hd=new Set(LS('toast:hiddenReq')||[]);hd.add(id);LS('toast:hiddenReq',[...hd]);LS('toast:recent',(LS('toast:recent')||[]).filter(r=>r.id!==id));toast('ลบออกจากรายการแล้ว');renderLanding()}
+function toggleSel(id){if(!reqSel)return;reqSel.has(id)?reqSel.delete(id):reqSel.add(id);renderLanding()}
+function hideSelected(){const hd=new Set(LS('toast:hiddenReq')||[]);reqSel.forEach(id=>hd.add(id));LS('toast:hiddenReq',[...hd]);LS('toast:recent',(LS('toast:recent')||[]).filter(r=>!reqSel.has(r.id)));const n=reqSel.size;reqSel=null;toast('ลบแล้ว '+n+' รายการ');renderLanding()}
 function pickCover(inp,id){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');const s=Math.min(1,900/Math.max(im.width,im.height));c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);LS('toast:cover:'+id,c.toDataURL('image/jpeg',.7));renderLanding()};im.src=r.result};r.readAsDataURL(f)}
 const FEE_TYPES=[['none','ไม่คิดเงิน',''],['perItem','ต่อชิ้น','THB/ชิ้น'],['perKg','ตามน้ำหนัก','THB/กก.'],['percent','ร้อยละ','% ของราคาของ']];
 let feeType='perItem';
@@ -537,41 +567,41 @@ async function seedDemo(silent){
   const mk=async(name,currency,close,recv,items,extra={})=>{const id='d'+(await sha(S.user.uid+name)).slice(0,9);const rate=RATES[currency]||await fetchRate(currency);await store.createTrip({id,name,shopper:S.user.displayName||'ฉัน',ownerUid:S.user.uid,currency,rate,recv,close,createdAt:Date.now(),demo:true,fee:{type:'perItem',value:50},...extra});
     let t=Date.now()-items.length*3600e3;let n=0;for(const it of items){await store.addItem(id,{id:'i'+(++n),photo:'',budget:null,detail:'',mapUrl:'',lat:null,lng:null,fallback:'contact',log:[{s:'requested',at:t}],...it,createdAt:t});t+=3600e3;}};
   await mk('Osaka',"JPY",d(-62),d(-52),[
-    {requester:'น้ำหวาน',name:'Kit Kat ชาเขียว',cat:'ขนม/อาหาร',price:980,qty:3,shop:'Don Quijote Dotonbori',status:'delivered',paid:950},
-    {requester:'น้ำหวาน',name:'Royce Nama Chocolate',cat:'ขนม/อาหาร',price:1500,qty:2,shop:'Kansai Airport',status:'delivered',paid:1500},
+    {requester:'น้ำหวาน',name:'Kit Kat ชาเขียว',cat:'ของกิน',price:980,qty:3,shop:'Don Quijote Dotonbori',status:'delivered',paid:950},
+    {requester:'น้ำหวาน',name:'Royce Nama Chocolate',cat:'ของกิน',price:1500,qty:2,shop:'Kansai Airport',status:'delivered',paid:1500},
     {requester:'บอส',name:'ยาหยอดตา Rohto Z',cat:'ยา/วิตามิน',price:700,qty:4,shop:'Matsumoto Kiyoshi',status:'delivered',paid:680},
     {requester:'บอส',name:'Uniqlo Airism เสื้อกล้าม M',cat:'เสื้อผ้า',price:1990,qty:2,shop:'Uniqlo Shinsaibashi',status:'notfound'},
   ]);
   await mk('Tokyo',"JPY",d(-2),d(6),[
     {requester:'น้ำหวาน',name:'Seiko Presage SRPB41',cat:'ของใช้',price:60000,budget:65000,qty:1,shop:'Seiko สาขาไหนก็ได้',detail:'หน้าปัดขาว สายเหล็ก',status:'searching',fallback:'contact',contact:'LINE: namwan99'},
     {requester:'มายด์',name:'Shiseido Ultimune 50ml',cat:'เครื่องสำอาง',price:9900,qty:1,shop:'Ginza Six',status:'found',paid:9500},
-    {requester:'มายด์',name:'Tokyo Banana',cat:'ขนม/อาหาร',price:1200,qty:5,shop:'Tokyo Station',status:'requested',fallback:'substitute',substitute:{name:'Tokyo Banana รสช็อกโกแลต',price:1300,qty:5,detail:'',shop:'Tokyo Station',photo:''}},
+    {requester:'มายด์',name:'Tokyo Banana',cat:'ของกิน',price:1200,qty:5,shop:'Tokyo Station',status:'requested',fallback:'substitute',substitute:{name:'Tokyo Banana รสช็อกโกแลต',price:1300,qty:5,detail:'',shop:'Tokyo Station',photo:''}},
     {requester:'ปอ',name:'Onitsuka Tiger Mexico 66 เหลือง 40',cat:'เสื้อผ้า',price:13000,qty:1,shop:'Onitsuka Tiger Omotesando',status:'packed',paid:12800},
     {requester:'ปอ',name:'Daiso ที่คั่นหนังสือ',cat:'ของใช้',price:110,qty:10,shop:'Daiso Harajuku',status:'cancelled'},
   ],{fee:{type:'perItem',value:50},rate:0.24,deposit:5000,note:'ไม่รับของเหลวเกิน 100ml'});
   await mk('Hong Kong',"HKD",d(-122),d(-115),[
-    {requester:'มายด์',name:'Jenny Bakery คุกกี้เนย 4 mix',cat:'ขนม/อาหาร',price:170,qty:2,shop:'Jenny Bakery Tsim Sha Tsui',status:'delivered',paid:170},
-    {requester:'ปอ',name:'Lee Kum Kee ซอส XO',cat:'ขนม/อาหาร',price:88,qty:3,shop:'Wellcome',status:'delivered',paid:85},
+    {requester:'มายด์',name:'Jenny Bakery คุกกี้เนย 4 mix',cat:'ของกิน',price:170,qty:2,shop:'Jenny Bakery Tsim Sha Tsui',status:'delivered',paid:170},
+    {requester:'ปอ',name:'Lee Kum Kee ซอส XO',cat:'ของกิน',price:88,qty:3,shop:'Wellcome',status:'delivered',paid:85},
   ]);
   await mk('Taipei',"TWD",null,null,[
-    {requester:'ต้น',name:'ชานมไข่มุก ชุดชง Chun Shui Tang',cat:'ขนม/อาหาร',price:450,qty:2,shop:'Chun Shui Tang',status:'requested'},
+    {requester:'ต้น',name:'ชานมไข่มุก ชุดชง Chun Shui Tang',cat:'ของกิน',price:450,qty:2,shop:'Chun Shui Tang',status:'requested'},
   ]);
   await mk('เชียงใหม่',"THB",null,null,[]);
   await mk('Singapore',"SGD",d(108),d(116),[
-    {requester:'น้ำหวาน',name:'Bengawan Solo Pandan Cake',cat:'ขนม/อาหาร',price:22,qty:2,shop:'Changi Airport',status:'requested'},
+    {requester:'น้ำหวาน',name:'Bengawan Solo Pandan Cake',cat:'ของกิน',price:22,qty:2,shop:'Changi Airport',status:'requested'},
   ]);
   await mk('Seoul',"KRW",d(61),d(70),[
     {requester:'น้ำหวาน',name:'Laneige Lip Sleeping Mask',cat:'เครื่องสำอาง',price:22000,qty:2,shop:'Olive Young Myeongdong',status:'requested'},
-    {requester:'ต้น',name:'สาหร่าย Kimnori กล่องใหญ่',cat:'ขนม/อาหาร',price:15000,qty:3,shop:'Lotte Mart Seoul Station',status:'requested'},
+    {requester:'ต้น',name:'สาหร่าย Kimnori กล่องใหญ่',cat:'ของกิน',price:15000,qty:3,shop:'Lotte Mart Seoul Station',status:'requested'},
   ]);
   const friend=async(id,name,shopper,currency,items)=>{await store.createTrip({id,name,shopper,ownerUid:S.user.uid,demoFriend:true,invited:[S.user.uid],currency,rate:RATES[currency]||1,close:d(20),recv:d(28),createdAt:Date.now(),demo:true,fee:{type:'percent',value:5},note:'ค่าหิ้ว 5% นะจ๊ะ โอนตอนของถึง'});let t=Date.now()-86400e3;let n=0;for(const it of items){await store.addItem(id,{id:'i'+(++n),requester:S.user.displayName||'ฉัน',rid:'u-'+S.user.uid,requesterUid:S.user.uid,photo:'',budget:null,detail:'',mapUrl:'',lat:null,lng:null,fallback:'contact',log:[{s:'requested',at:t}],...it,createdAt:t});t+=3600e3;}
     const recent=(LS('toast:recent')||[]).filter(x=>x.id!==id);recent.unshift({id,name,shopper});LS('toast:recent',recent.slice(0,12));};
   await friend('d'+(await sha(S.user.uid+'London')).slice(0,9),'London','บอส','GBP',[
-    {name:'Whittard Earl Grey',cat:'ขนม/อาหาร',price:12,qty:2,shop:'Whittard Covent Garden',status:'found',paid:12},
+    {name:'Whittard Earl Grey',cat:'ของกิน',price:12,qty:2,shop:'Whittard Covent Garden',status:'found',paid:12},
     {name:'Boots No7 serum',cat:'เครื่องสำอาง',price:28,qty:1,shop:'Boots',status:'requested',contact:'LINE: tidatip'},
   ]);
   await friend('d'+(await sha(S.user.uid+'Fukuoka')).slice(0,9),'Fukuoka','มายด์','JPY',[
-    {name:'Hakata Torimon',cat:'ขนม/อาหาร',price:1300,qty:3,shop:'Hakata Station',status:'delivered',paid:1300},
+    {name:'Hakata Torimon',cat:'ของกิน',price:1300,qty:3,shop:'Hakata Station',status:'delivered',paid:1300},
   ]);
   const demoUsers=[{uid:'f-boss',username:'boss',name:'บอส'},{uid:'f-mind',username:'mind',name:'มายด์'},{uid:'f-namwan',username:'namwan99',name:'น้ำหวาน'},{uid:'f-por',username:'por',name:'ปอ'}];
   LS('toast:demoUsers',demoUsers);LS('toast:friends:'+S.user.uid,demoUsers.slice(0,3).map(u=>({uid:u.uid,name:u.name,username:u.username,at:Date.now()})));
@@ -589,6 +619,7 @@ async function createTrip(){
   try{await store.createTrip({id,name,shopper,ownerUid:S.user.uid,currency,rate,recv,close,fee,deposit,note,createdAt:Date.now()});}catch(e){toast('สร้างไม่สำเร็จ: '+(e.code||e.message));return}
   location.href=`?t=${id}`;
 }
+function goHome(){if(S.role==='requester'&&!S.user){homeTab='request';}else if(S.role==='requester'){LS('toast:homeTab','request');}else{LS('toast:homeTab','bags');}location.href='./'}
 function openLink(){try{const u=new URL($('#tLink').value.trim());location.href=u.search;}catch{toast('ลิงค์ไม่ถูกต้อง')}}
 
 function render(){ if(!S.trip)return; document.body.classList.remove('landing'); S.role==='shopper'?renderShopper():renderRequester(); }
@@ -635,23 +666,24 @@ function itemRow(i){
       <span class="st ${i.status}">${STATUS[i.status]}</span>
     </div></div>`;
 }
+let itemSort='cat';
 function itemsView(){
-  const f=S.filter;const shops=[...new Set(S.items.map(i=>i.shop).filter(Boolean))];
-  const offSet=['cancelled','notfound'];
-  let list=S.items.filter(i=>(f.view==='off'?offSet.includes(i.status):!offSet.includes(i.status))&&(!f.cat||i.cat===f.cat)&&(!f.status||i.status===f.status)&&(!f.shop||i.shop===f.shop));
-  if(S.pos){list.forEach(i=>{i.distKm=i.lat?haversine(S.pos,i):null});list.sort((a,b)=>(a.distKm??1e9)-(b.distKm??1e9));}
-  const chip=(key,val,label)=>`<button class="chip ${f[key]===val?'on':''}" onclick="S.filter.${key}=S.filter.${key}==='${esc(val)}'?'':'${esc(val)}';render()">${esc(label)}</button>`;
+  const f=S.filter;const offSet=['cancelled','notfound'];
+  let list=S.items.filter(i=>(f.view==='off'?offSet.includes(i.status):!offSet.includes(i.status)));
+  if(itemSort==='near'&&S.pos){list.forEach(i=>{i.distKm=i.lat?haversine(S.pos,i):null});list.sort((a,b)=>(a.distKm??1e9)-(b.distKm??1e9));}
+  else if(itemSort==='status'){const order=['requested','searching','found','packed','delivered','cancelled','notfound'];list.sort((a,b)=>order.indexOf(a.status)-order.indexOf(b.status));}
+  else{list.sort((a,b)=>(a.cat||'').localeCompare(b.cat||'','th')||(a.name||'').localeCompare(b.name||'','th'));}
   const nOff=S.items.filter(i=>offSet.includes(i.status)).length;
+  let body='';
+  if(itemSort==='cat'&&list.length){const g={};list.forEach(i=>(g[i.cat||'อื่น ๆ']=g[i.cat||'อื่น ๆ']||[]).push(i));body=Object.keys(g).map(k=>`<div class="card"><h3 style="margin-bottom:4px">${esc(k)} <span class="muted">${g[k].length}</span></h3>${g[k].map(itemRow).join('')}</div>`).join('');}
+  else body=`<div class="card">${list.length?list.map(itemRow).join(''):'<div class="empty">ยังไม่มีของ</div>'}</div>`;
   return `
-   <div class="seg"><button class="${f.view!=='off'?'on':''}" onclick="S.filter.view='all';S.filter.status='';render()">รายการทั้งหมด</button><button class="${f.view==='off'?'on':''}" onclick="S.filter.view='off';S.filter.status='';render()">ยกเลิก${nOff?' ('+nOff+')':''}</button></div>
-   ${f.view!=='off'?`<div class="chips">${['requested','searching','found'].map(s=>chip('status',s,STATUS[s])).join('')}</div>`:''}
-   <div class="chips">${[...new Set([...CATS,...S.items.map(i=>i.cat).filter(Boolean)])].map(c=>chip('cat',c,c)).join('')}</div>
-   ${shops.length?`<div class="chips">${shops.map(s=>chip('shop',s,s)).join('')}</div>`:''}
-   <div class="row" style="margin-bottom:12px"><button class="btn ghost sm" onclick="locateMe()">${ic('pin',16)} ${S.pos?'เรียงตามระยะแล้ว':'เรียงตามร้านใกล้ฉัน'}</button>${(f.cat||f.status||f.shop)?`<button class="btn ghost sm" onclick="S.filter.cat='';S.filter.status='';S.filter.shop='';render()">ล้างตัวกรอง</button>`:''}</div>
-   <div class="card">${list.length?list.map(itemRow).join(''):'<div class="empty">ไม่มีรายการตรงตัวกรอง</div>'}</div>`;
+   <div class="seg"><button class="${f.view!=='off'?'on':''}" onclick="S.filter.view='all';render()">รายการทั้งหมด</button><button class="${f.view==='off'?'on':''}" onclick="S.filter.view='off';render()">ยกเลิก${nOff?' ('+nOff+')':''}</button></div>
+   <div class="seg3"><button class="${itemSort==='cat'?'on':''}" onclick="itemSort='cat';render()">ตามหมวด</button><button class="${itemSort==='status'?'on':''}" onclick="itemSort='status';render()">ตามสถานะ</button><button class="${itemSort==='near'?'on':''}" onclick="itemSort='near';S.pos?render():locateMe()">${ic('pin',14)} ร้านใกล้ฉัน</button></div>
+   ${list.length?body:'<div class="card"><div class="empty">ยังไม่มีของ</div></div>'}`;
 }
 function haversine(a,b){const R=6371,d=x=>x*Math.PI/180;const dl=d(b.lat-a.lat),dg=d(b.lng-a.lng);const h=Math.sin(dl/2)**2+Math.cos(d(a.lat))*Math.cos(d(b.lat))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
-function locateMe(){navigator.geolocation.getCurrentPosition(p=>{S.pos={lat:p.coords.latitude,lng:p.coords.longitude};render()},()=>toast('ขอตำแหน่งไม่ได้ ลองเปิด Location ให้เบราว์เซอร์'),{enableHighAccuracy:true,timeout:8000})}
+function locateMe(){navigator.geolocation.getCurrentPosition(p=>{S.pos={lat:p.coords.latitude,lng:p.coords.longitude};itemSort='near';render()},()=>toast('ขอตำแหน่งไม่ได้ ลองเปิด Location ให้เบราว์เซอร์'),{enableHighAccuracy:true,timeout:8000})}
 function shareView(){
   const link=location.origin+location.pathname+`?t=${S.tripId}&r=1`;
   const sum={},feeSum={};S.items.filter(i=>['found','packed','delivered'].includes(i.status)).forEach(i=>{sum[i.requester]=(sum[i.requester]||0)+goodsThb(i);feeSum[i.requester]=(feeSum[i.requester]||0)+feeFor(i)});
@@ -694,13 +726,14 @@ function openItemForm(){
    <div class="row"><div class="field"><label>ราคาที่เห็น (${cur()})</label><input id="fPrice" inputmode="decimal" oninput="approx('fPrice','aPrice')"><div class="approx" id="aPrice" style="margin:2px 0 0"></div></div><div class="field"><label>จำนวน</label><input id="fQty" inputmode="numeric" value="1"></div></div>
    ${S.trip&&S.trip.fee&&S.trip.fee.type==='perKg'?`<div class="field"><label>น้ำหนักโดยประมาณ (กก.)</label><input id="fWeight" inputmode="decimal" placeholder="เช่น 1.5"></div>`:''}
    <div class="field"><label>งบไม่เกิน (${cur()}) ถ้าราคาต่างจากที่เห็น</label><input id="fBudget" inputmode="decimal" placeholder="เว้นว่างได้" oninput="approx('fBudget','aBudget')"><div class="approx" id="aBudget" style="margin:2px 0 0"></div></div>
-   <div class="field"><label>ประเภท</label><div class="catpick" id="fCatPick">${CATS.map((c,i)=>`<button type="button" class="chip ${i===0?'on':''}" onclick="pickCat(this)">${c}</button>`).join('')}<button type="button" class="chip" id="catMore" onclick="moreCats()">…</button></div></div>
+   <div class="field"><label>ประเภท</label><div class="catpick" id="fCatPick">${CATS.map((c,i)=>`<button type="button" class="chip ${i===0?'on':''}" onclick="pickCat(this)">${c}</button>`).join('')}</div></div>
    <div class="field"><label>รายละเอียด / จุดสังเกต</label><textarea id="fDetail" placeholder="สี ขนาด รุ่น ห้ามซื้อแบบไหน"></textarea></div>
    <div class="field"><label>ร้าน</label><input id="fShop" placeholder="ชื่อร้าน / สาขา"></div>
    <div class="field"><label>ตำแหน่งร้าน</label><div class="row"><input id="fLoc" placeholder="วางลิงค์ Google Maps"><button class="btn ghost sm" style="flex:0;white-space:nowrap" onclick="useHere()">ตรงนี้</button></div></div>
    <h3 style="margin:14px 0 8px">ถ้าหาไม่เจอ ให้ทำยังไง</h3>
-   <div class="field" id="contactBox"><label>ช่องทางติดต่อฉัน (LINE / โทร)</label><input id="fContact" placeholder="เช่น LINE: namwan99 หรือ 08x-xxx-xxxx" value="${esc(LS('toast:contact')||'')}"></div>
-   ${Object.entries(FALLBACK).map(([k,v],i)=>`<label class="radio"><input type="radio" name="fb" value="${k}" ${i===1?'checked':''} onchange="$('#subBox').classList.toggle('hidden',this.value!=='substitute');$('#contactBox').classList.toggle('hidden',this.value!=='contact')"><span><b>${v}</b></span></label>`).join('')}
+   <div class="opts">
+   ${Object.entries(FALLBACK).map(([k,v],i)=>`<label class="opt"><input type="radio" name="fb" value="${k}" ${i===1?'checked':''} onchange="fbUI(this.value)"><span class="ring">${ic('check',14)}</span><span class="lbl">${v}</span></label>${k==='contact'?`<div class="optsub" id="contactBox"><div class="field" style="margin:0"><label>ทักฉันได้ที่ (LINE / โทร) — ไม่บังคับ</label><input id="fContact" placeholder="เช่น LINE: namwan99" value="${esc(LS('toast:contact')||'')}"></div></div>`:''}`).join('')}
+   </div>
    <div id="subBox" class="hidden card">
      <h3>ของทดแทน</h3>
      <div class="field"><label>รูป</label><label class="photobox" id="sBox" style="min-height:90px"><img id="sImg" alt=""><span class="ph">${ic('camera',24)}เพิ่มรูป</span><input type="file" accept="image/*" hidden onchange="pickPhoto(this,'sImg','sub')"></label></div>
@@ -711,10 +744,8 @@ function openItemForm(){
    </div>
    <button class="btn block" onclick="saveItem()">ฝากซื้อ</button>`);
 }
+function fbUI(v){$('#subBox').classList.toggle('hidden',v!=='substitute');$('#contactBox').classList.toggle('hidden',v!=='contact')}
 function pickCat(b){[...b.parentNode.children].forEach(x=>x.classList.remove('on'));b.classList.add('on')}
-function moreCats(){const extra=[...new Set([...CATS_MORE,...(LS('toast:customCats')||[])])];
-  sheet(`<h2>ประเภทอื่น</h2><div class="chips">${extra.map(c=>`<button class="chip" onclick="useCat('${esc(c)}')">${esc(c)}</button>`).join('')}</div><div class="field" style="margin-top:12px"><label>เพิ่มประเภทเอง</label><div class="row"><input id="newCat" placeholder="เช่น อะไหล่รถ"><button class="btn sm" style="flex:0" onclick="useCat($('#newCat').value.trim(),true)">ใช้</button></div></div>`)}
-function useCat(c,custom){if(!c)return;if(custom){const cc=LS('toast:customCats')||[];if(!cc.includes(c))cc.push(c);LS('toast:customCats',cc.slice(-6));}const m=$('#catMore');m.textContent=c;pickCat(m);closeSheet()}
 function pickPhoto(inp,imgId,which){
   const f=inp.files[0];if(!f)return;const r=new FileReader();
   r.onload=()=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');const s=Math.min(1,720/Math.max(im.width,im.height));c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);const d=c.toDataURL('image/jpeg',.6);which==='main'?photoData=d:subPhotoData=d;$('#'+imgId).src=d;$('#'+imgId).parentNode.classList.add('has');};im.src=r.result;};
@@ -732,8 +763,8 @@ async function saveItem(){
   if(!who||!name){toast('ใส่ชื่อผู้ฝากและชื่อสินค้าก่อน');return}
   if(photoData.length>900000){toast('รูปใหญ่เกินไป ลองรูปอื่น');return}
   const loc=parseLoc($('#fLoc').value)||{};
-  const fb=$('input[name=fb]:checked').value;const contact=$('#fContact').value.trim();if(fb==='contact'&&!contact){toast('ใส่ช่องทางติดต่อไว้ด้วย เผื่อหาของไม่เจอ');return}if(contact)LS('toast:contact',contact);
-  const it={id:uid(8),requester:who,name,photo:photoData,price:+$('#fPrice').value||null,budget:+$('#fBudget').value||null,qty:+$('#fQty').value||1,weight:$('#fWeight')?(+$('#fWeight').value||null):null,cat:(($('#fCatPick .on')||{}).textContent||CATS[0]).replace('…',CATS[0]),detail:$('#fDetail').value.trim(),shop:$('#fShop').value.trim(),lat:loc.lat??null,lng:loc.lng??null,mapUrl:loc.mapUrl||'',fallback:fb,contact:contact||'',rid:S.role==='requester'?S.rid:'',requesterUid:(S.role==='requester'&&S.user)?S.user.uid:'',status:'requested',log:[{s:'requested',at:Date.now()}]};
+  const fb=$('input[name=fb]:checked').value;const contact=$('#fContact').value.trim();if(contact)LS('toast:contact',contact);
+  const it={id:uid(8),requester:who,name,photo:photoData,price:+$('#fPrice').value||null,budget:+$('#fBudget').value||null,qty:+$('#fQty').value||1,weight:$('#fWeight')?(+$('#fWeight').value||null):null,cat:($('#fCatPick .on')||{}).textContent||CATS[0],detail:$('#fDetail').value.trim(),shop:$('#fShop').value.trim(),lat:loc.lat??null,lng:loc.lng??null,mapUrl:loc.mapUrl||'',fallback:fb,contact:contact||'',rid:S.role==='requester'?S.rid:'',requesterUid:(S.role==='requester'&&S.user)?S.user.uid:'',status:'requested',log:[{s:'requested',at:Date.now()}]};
   if(fb==='substitute')it.substitute={name:$('#sName').value.trim(),photo:subPhotoData,price:+$('#sPrice').value||null,qty:+$('#sQty').value||1,detail:$('#sDetail').value.trim(),shop:$('#sShop').value.trim()};
   await store.addItem(S.tripId,it);closeSheet();toast('ฝากแล้ว');
 }
