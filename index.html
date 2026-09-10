@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#FFC46B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Toast — ฝากซื้อกันเอง</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#4A3417;--ink-2:#8C7148;--line:#F5E4B8;
+  --bg:#FFFBEA;--card:#FFFEF7;--accent:#FFC46B;--accent-deep:#D9903A;--accent-soft:#FEF0C4;--on-accent:#4A3417;
+  --st-requested:#B0B7C3;--st-found:#7BB0F0;--st-packed:#F5C46B;--st-delivered:#6FB584;--st-off:#EF8A8A;
+  --r:18px;--pad:16px;
+}
+:root[data-theme=matcha]{
+  --ink:#2B3A1D;--ink-2:#6A7D55;--line:#E1EBCB;
+  --bg:#F8FBEF;--card:#FDFEF8;--accent:#C5E1A5;--accent-deep:#6B8E3E;--accent-soft:#EAF4D9;--on-accent:#2B3A1D;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:Mitr,system-ui,sans-serif;font-weight:300;font-size:16px;line-height:1.5;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;padding-bottom:env(safe-area-inset-bottom)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+h1,h2,h3{font-weight:500;line-height:1.25}
+h1{font-size:28px}h2{font-size:20px}h3{font-size:16px}
+.muted{color:var(--ink-2);font-size:14px}
+.hidden{display:none!important}
+
+/* layout */
+.app{max-width:560px;margin:0 auto;min-height:100%;display:flex;flex-direction:column}
+header.top{display:flex;align-items:center;gap:12px;padding:14px var(--pad) 8px}
+header.top .logo{width:36px;height:36px;flex:none}
+header.top .title{flex:1}
+header.top .title h1{font-size:22px}
+header.top .title .muted{font-size:13px}
+main{flex:1;padding:8px var(--pad) 90px}
+nav.tabs{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
+nav.tabs .inner{display:flex;width:100%;max-width:560px}
+nav.tabs button{flex:1;padding:10px 4px 8px;font-size:12px;color:var(--ink-2);display:flex;flex-direction:column;align-items:center;gap:2px}
+nav.tabs button svg{width:24px;height:24px}
+nav.tabs button.on{color:var(--accent-deep);font-weight:500}
+
+/* cards & controls */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 18px;border-radius:999px;background:var(--accent);color:var(--on-accent);font-weight:500;min-height:44px}
+.btn.deep{background:var(--accent-deep);color:#fff}
+.btn.ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink)}
+.btn.soft{background:var(--accent-soft);color:var(--accent-deep)}
+.btn.danger{background:#FEE2E2;color:#B91C1C}
+.btn.sm{padding:6px 12px;min-height:34px;font-size:14px}
+.btn.block{width:100%}
+.btn:disabled{opacity:.5}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:14px;color:var(--ink-2);margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:#fff;min-height:44px}
+.field textarea{min-height:72px;resize:vertical}
+.field input:focus,.field select:focus,.field textarea:focus,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.chip{padding:6px 12px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-size:14px;min-height:34px}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.radio{display:flex;gap:8px;align-items:flex-start;padding:10px;border:1.5px solid var(--line);border-radius:12px;margin-bottom:8px;cursor:pointer}
+.radio input{margin-top:5px}
+.radio b{font-weight:500;display:block}
+
+/* status */
+.st{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;color:#fff;text-shadow:0 0 2px rgba(0,0,0,.15);background:var(--st-requested);font-weight:400;white-space:nowrap}
+.st.found{background:var(--st-found)}.st.packed{background:var(--st-packed)}.st.delivered{background:var(--st-delivered)}.st.cancelled,.st.notfound{background:var(--st-off)}
+.steps{display:flex;gap:4px;margin:8px 0}
+.steps span{flex:1;height:6px;border-radius:3px;background:var(--line)}
+.steps span.done{background:var(--accent-deep)}
+.steps.off span.done{background:var(--st-off)}
+
+/* item */
+.item{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.item .thumb{width:64px;height:64px;border-radius:12px;object-fit:cover;background:var(--accent-soft);flex:none;display:flex;align-items:center;justify-content:center;font-size:26px}
+.item .body{flex:1;min-width:0}
+.item .name{font-weight:500}
+.item .meta{font-size:13px;color:var(--ink-2)}
+.item .meta a{color:var(--accent-deep)}
+.acc>summary{list-style:none;display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0}
+.acc>summary::-webkit-details-marker{display:none}
+.acc>summary .av{width:40px;height:40px;border-radius:50%;background:var(--accent-soft);color:var(--accent-deep);display:flex;align-items:center;justify-content:center;font-weight:500;flex:none}
+.acc>summary .who{flex:1}
+.acc>summary .who b{font-weight:500}
+.acc>summary .caret{transition:transform .2s}
+.acc[open]>summary .caret{transform:rotate(180deg)}
+.badges{display:flex;gap:4px}
+.badges span{min-width:22px;height:22px;padding:0 6px;border-radius:11px;font-size:12px;color:#fff;display:flex;align-items:center;justify-content:center;background:var(--st-requested)}
+
+/* hero (landing) */
+.hero{padding:36px 0 20px;text-align:center}
+.hero img{width:120px;height:120px}
+.hero h1{margin-top:12px}
+.hero p{max-width:32ch;margin:6px auto 0}
+
+/* sheet */
+.sheet-bg{position:fixed;inset:0;background:rgba(58,36,21,.45);display:flex;align-items:flex-end;justify-content:center;z-index:50}
+.sheet{background:var(--bg);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;padding:16px var(--pad) calc(24px + env(safe-area-inset-bottom))}
+.sheet .grip{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 12px}
+.sheet h2{margin-bottom:12px}
+.photo-pick{display:flex;align-items:center;gap:12px}
+.photo-pick img{width:72px;height:72px;border-radius:12px;object-fit:cover;background:var(--accent-soft)}
+
+/* toast (of course) */
+#toasts{position:fixed;top:12px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:99;pointer-events:none}
+.toastmsg{background:var(--ink);color:#fff;padding:8px 16px;border-radius:999px;font-size:14px;animation:pop .2s}
+@keyframes pop{from{transform:translateY(-8px);opacity:0}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.empty{text-align:center;padding:36px 12px;color:var(--ink-2)}
+.empty svg{width:64px;height:64px;margin-bottom:8px}
+.timeline{list-style:none;font-size:13px;color:var(--ink-2)}
+.timeline li{display:flex;gap:8px;padding:2px 0}
+.timeline li::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent-deep);margin-top:7px;flex:none}
+.share{display:flex;gap:8px;align-items:center;background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:8px 8px 8px 12px}
+.share code{flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:inherit}
+.ver{font-size:12px;color:var(--ink-2);text-align:center;padding:8px}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<div id="toasts"></div>
+<div id="sheetRoot"></div>
+
+<!-- Firebase compat -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* =====================================================================
+   Toast v1.0 — ฝากซื้อกันเอง (single-file PWA)
+   ===================================================================== */
+const VERSION='1.2';
+
+/* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
+   ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
+const FIREBASE_CONFIG=null;
+/* ตัวอย่าง
+const FIREBASE_CONFIG={apiKey:"...",authDomain:"toast-xxxx.firebaseapp.com",projectId:"toast-xxxx"};
+*/
+
+/* ---------- 2. constants ---------- */
+const STATUS={requested:'ฝากไว้',found:'เจอแล้ว',packed:'ลงกระเป๋าแล้ว',delivered:'ถึงมือแล้ว',cancelled:'ยกเลิก',notfound:'หาไม่ได้'};
+const FLOW=['requested','found','packed','delivered'];
+const CATS=['ขนม/อาหาร','เครื่องสำอาง','เสื้อผ้า','ยา/วิตามิน','ของใช้','ของฝาก','อื่นๆ'];
+const FALLBACK={substitute:'ซื้อของทดแทนที่ระบุไว้',contact:'ติดต่อฉันก่อน',cancel:'ยกเลิกรายการนี้ไปเลย'};
+const ICON_SVG=`<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><path d="M22 20c0-9 20-9 20 0" fill="none" stroke="var(--accent-deep)" stroke-width="4" stroke-linecap="round"/><path d="M16 26c-5 0-8 4-6 9 1 2 1 4 1 6v11c0 4 3 7 7 7h28c4 0 7-3 7-7V41c0-2 0-4 1-6 2-5-1-9-6-9-2-6-8-9-16-9s-14 3-16 9z" fill="var(--accent)"/><path d="M20 34h24v20H20z" fill="#FFF4E8" opacity=".85"/></svg>`;
+
+/* ---------- 3. storage layer: Firestore หรือ local ---------- */
+const LS=(k,v)=>v===undefined?JSON.parse(localStorage.getItem(k)||'null'):localStorage.setItem(k,JSON.stringify(v));
+const uid=(n=10)=>{const c='abcdefghjkmnpqrstuvwxyz23456789';let s='';crypto.getRandomValues(new Uint8Array(n)).forEach(b=>s+=c[b%c.length]);return s};
+async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+
+let DB=null;
+if(FIREBASE_CONFIG){firebase.initializeApp(FIREBASE_CONFIG);DB=firebase.firestore();try{DB.enablePersistence({synchronizeTabs:true})}catch(e){}}
+
+const store={
+  online:!!DB,
+  async createTrip(t){ if(DB){await DB.collection('trips').doc(t.id).set(t);} else {LS('toast:trip:'+t.id,t);LS('toast:items:'+t.id,[]);} },
+  async getTrip(id){ if(DB){const d=await DB.collection('trips').doc(id).get();return d.exists?d.data():null;} return LS('toast:trip:'+id); },
+  async updateTrip(id,patch){ if(DB){await DB.collection('trips').doc(id).update(patch);} else {LS('toast:trip:'+id,{...LS('toast:trip:'+id),...patch});} },
+  watchItems(id,cb){
+    if(DB){return DB.collection('trips').doc(id).collection('items').orderBy('createdAt').onSnapshot(s=>cb(s.docs.map(d=>({id:d.id,...d.data()}))));}
+    const fire=()=>cb(LS('toast:items:'+id)||[]);fire();
+    const h=e=>{if(e.key==='toast:items:'+id)fire()};window.addEventListener('storage',h);store._local=fire;
+    return ()=>window.removeEventListener('storage',h);
+  },
+  async addItem(id,it){ it.createdAt=Date.now(); if(DB){await DB.collection('trips').doc(id).collection('items').doc(it.id).set(it);} else {const a=LS('toast:items:'+id)||[];a.push(it);LS('toast:items:'+id,a);store._local&&store._local();} },
+  async updateItem(id,itemId,patch){ if(DB){await DB.collection('trips').doc(id).collection('items').doc(itemId).update(patch);} else {const a=(LS('toast:items:'+id)||[]).map(x=>x.id===itemId?{...x,...patch}:x);LS('toast:items:'+id,a);store._local&&store._local();} },
+};
+
+/* ---------- 4. state & routing ---------- */
+const Q=new URLSearchParams(location.search);
+const S={tripId:Q.get('t'),role:Q.get('r')?'requester':null,trip:null,items:[],tab:'people',filter:{cat:'',status:'',shop:''},me:null,pos:null,unsub:null};
+document.documentElement.dataset.theme=LS('toast:theme')||'tangerine';
+
+const $=(s,el=document)=>el.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>n==null||n===''?'':Number(n).toLocaleString('th-TH');
+const initials=n=>(n||'?').trim().slice(0,1).toUpperCase();
+function toast(msg){const d=document.createElement('div');d.className='toastmsg';d.textContent=msg;$('#toasts').append(d);setTimeout(()=>d.remove(),2200)}
+
+/* ---------- 5. boot ---------- */
+async function boot(){
+  if(!S.tripId){renderLanding();return;}
+  S.trip=await store.getTrip(S.tripId);
+  if(!S.trip){renderLanding('ไม่พบทริปนี้ ลิงค์อาจผิดหรือถูกลบไปแล้ว');return;}
+  const myPin=LS('toast:pin:'+S.tripId);
+  if(!S.role){ S.role=(myPin&&myPin===S.trip.pinHash)?'shopper':'requester'; }
+  S.me=LS('toast:me')||'';
+  const recent=(LS('toast:recent')||[]).filter(x=>x.id!==S.tripId);recent.unshift({id:S.tripId,name:S.trip.name,role:S.role});LS('toast:recent',recent.slice(0,8));
+  S.unsub=store.watchItems(S.tripId,items=>{S.items=items;render()});
+  render();
+}
+
+/* ---------- 6. views ---------- */
+function shell(body,tabs){
+  $('#app').innerHTML=`
+  <header class="top">
+    <img class="logo" src="icons/icon-192.png" alt="" style="border-radius:9px">
+    <div class="title"><h1>${esc(S.trip?S.trip.name:'Toast')}</h1><div class="muted">${S.trip?(S.role==='shopper'?'คุณเป็นผู้รับฝาก':'ฝากซื้อกับ '+esc(S.trip.shopper)):'ฝากซื้อกันเอง'}${store.online?'':' · โหมดทดลองในเครื่อง'}</div></div>
+    <button class="btn ghost sm" onclick="openSettings()" aria-label="ตั้งค่า">⚙︎</button>
+  </header>
+  <main>${body}</main>
+  ${tabs||''}`;
+}
+
+function renderLanding(err){
+  const recent=LS('toast:recent')||[];
+  shell(`
+    <div class="hero"><img src="icons/icon-512.png" alt="" style="border-radius:26px"><h1>Toast</h1><p class="muted">ฝากซื้อกันเองในกลุ่มเพื่อน หิ้วของกลับมาให้ถึงมือ</p></div>
+    ${err?`<div class="card" style="border-color:#FCA5A5">${esc(err)}</div>`:''}
+    <div class="card">
+      <h2>เริ่มทริปใหม่ (ผู้รับฝาก)</h2>
+      <div class="field"><label>ชื่อทริป</label><input id="tName" placeholder="เช่น ญี่ปุ่น ต.ค. 69"></div>
+      <div class="field"><label>ชื่อของคุณ</label><input id="tShopper" placeholder="ชื่อที่เพื่อนจะเห็น"></div>
+      <div class="field"><label>PIN 4 หลัก สำหรับเข้าหน้าผู้รับฝาก</label><input id="tPin" inputmode="numeric" maxlength="6" placeholder="ตั้งเอง ใช้ตอนเปิดในเครื่องอื่น"></div>
+      <button class="btn block" onclick="createTrip()">สร้างทริปและรับลิงค์</button>
+    </div>
+    ${recent.length?`<div class="card"><h3>ทริปล่าสุด</h3>${recent.map(r=>`<div class="item"><div class="body"><div class="name">${esc(r.name)}</div><div class="meta">${r.role==='shopper'?'ผู้รับฝาก':'ผู้ฝาก'}</div></div><a class="btn soft sm" href="?t=${r.id}${r.role==='requester'?'&r=1':''}">เปิด</a></div>`).join('')}</div>`:''}
+    <div class="card"><h3>ได้ลิงค์จากเพื่อนมา?</h3><p class="muted">กดลิงค์ที่เพื่อนส่งให้ได้เลย ไม่ต้องสมัคร หรือวางลิงค์ตรงนี้</p><div class="row" style="margin-top:8px"><input id="tLink" placeholder="วางลิงค์" style="padding:10px 12px;border:1.5px solid var(--line);border-radius:12px"><button class="btn ghost sm" style="flex:0" onclick="openLink()">ไป</button></div></div>
+    <div class="ver">Toast v${VERSION}</div>`);
+}
+async function createTrip(){
+  const name=$('#tName').value.trim(),shopper=$('#tShopper').value.trim(),pin=$('#tPin').value.trim();
+  if(!name||!shopper||pin.length<4){toast('กรอกชื่อทริป ชื่อคุณ และ PIN อย่างน้อย 4 หลัก');return}
+  const id=uid(),pinHash=await sha(pin);
+  await store.createTrip({id,name,shopper,pinHash,createdAt:Date.now()});
+  LS('toast:pin:'+id,pinHash);
+  location.href=`?t=${id}`;
+}
+function openLink(){try{const u=new URL($('#tLink').value.trim());location.href=u.search;}catch{toast('ลิงค์ไม่ถูกต้อง')}}
+
+function render(){ if(!S.trip)return; S.role==='shopper'?renderShopper():renderRequester(); }
+
+/* --- shopper --- */
+function tabsHTML(){
+  const t=(id,label,svg)=>`<button class="${S.tab===id?'on':''}" onclick="S.tab='${id}';render()">${svg}<span>${label}</span></button>`;
+  return `<nav class="tabs"><div class="inner">
+   ${t('people','ผู้ฝาก','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M15 15a4.5 4.5 0 0 1 6.5 4"/></svg>')}
+   ${t('items','รายการ','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h13"/><circle cx="19" cy="17" r="2.5"/></svg>')}
+   ${t('share','แชร์ลิงค์','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.5 1.5"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7L12.5 17"/></svg>')}
+  </div></nav>`;
+}
+function renderShopper(){
+  let body='';
+  if(S.tab==='people')body=peopleView();
+  else if(S.tab==='items')body=itemsView();
+  else body=shareView();
+  shell(body,tabsHTML());
+}
+function countBadges(list){
+  const c={};list.forEach(i=>c[i.status]=(c[i.status]||0)+1);
+  return `<div class="badges">${Object.entries(c).map(([k,v])=>`<span class="st ${k}" title="${STATUS[k]}">${v}</span>`).join('')}</div>`;
+}
+function peopleView(){
+  const by={};S.items.forEach(i=>(by[i.requester]=by[i.requester]||[]).push(i));
+  const names=Object.keys(by).sort((a,b)=>a.localeCompare(b,'th'));
+  if(!names.length)return emptyState('ยังไม่มีใครฝากซื้อ','ส่งลิงค์ให้เพื่อนจากแท็บ "แชร์ลิงค์" หรือเพิ่มแทนเพื่อนได้เลย')+`<button class="btn block soft" onclick="openItemForm()">+ เพิ่มรายการแทนเพื่อน</button>`;
+  return `<button class="btn block soft" style="margin-bottom:12px" onclick="openItemForm()">+ เพิ่มรายการแทนเพื่อน</button>`+
+   names.map(n=>`<details class="card acc" ${names.length<4?'open':''}><summary><div class="av">${esc(initials(n))}</div><div class="who"><b>${esc(n)}</b><div class="muted">${by[n].length} รายการ</div></div>${countBadges(by[n])}<span class="caret">⌄</span></summary>${by[n].map(itemRow).join('')}</details>`).join('');
+}
+function itemRow(i){
+  const off=['cancelled','notfound'].includes(i.status);
+  const stepIdx=FLOW.indexOf(i.status);
+  return `<div class="item" onclick="openItem('${i.id}')">
+    ${i.photo?`<img class="thumb" src="${i.photo}" alt="">`:`<div class="thumb">🍞</div>`}
+    <div class="body">
+      <div class="name">${esc(i.name)} <span class="muted">×${i.qty||1}</span></div>
+      <div class="meta">${esc(i.requester)}${i.shop?' · '+esc(i.shop):''}${i.price?' · ฿'+fmt(i.price):''}${i.distKm!=null?' · '+i.distKm.toFixed(1)+' กม.':''}</div>
+      <div class="steps ${off?'off':''}">${FLOW.map((s,k)=>`<span class="${off?(k===0?'done':''):(k<=stepIdx?'done':'')}"></span>`).join('')}</div>
+      <span class="st ${i.status}">${STATUS[i.status]}</span>
+    </div></div>`;
+}
+function itemsView(){
+  const f=S.filter;const shops=[...new Set(S.items.map(i=>i.shop).filter(Boolean))];
+  let list=S.items.filter(i=>(!f.cat||i.cat===f.cat)&&(!f.status||i.status===f.status)&&(!f.shop||i.shop===f.shop));
+  if(S.pos){list.forEach(i=>{i.distKm=i.lat?haversine(S.pos,i):null});list.sort((a,b)=>(a.distKm??1e9)-(b.distKm??1e9));}
+  const chip=(key,val,label)=>`<button class="chip ${f[key]===val?'on':''}" onclick="S.filter.${key}=S.filter.${key}==='${esc(val)}'?'':'${esc(val)}';render()">${esc(label)}</button>`;
+  return `
+   <div class="chips">${['requested','found','packed','delivered'].map(s=>chip('status',s,STATUS[s])).join('')}${chip('status','cancelled','ยกเลิก/หาไม่ได้')}</div>
+   <div class="chips">${CATS.map(c=>chip('cat',c,c)).join('')}</div>
+   ${shops.length?`<div class="chips">${shops.map(s=>chip('shop',s,'📍 '+s)).join('')}</div>`:''}
+   <div class="row" style="margin-bottom:12px"><button class="btn ghost sm" onclick="locateMe()">${S.pos?'📍 เรียงตามระยะแล้ว':'📍 เรียงตามร้านใกล้ฉัน'}</button>${Object.values(f).some(Boolean)?`<button class="btn ghost sm" onclick="S.filter={cat:'',status:'',shop:''};render()">ล้างตัวกรอง</button>`:''}</div>
+   <div class="card">${list.length?list.map(itemRow).join(''):'<div class="empty">ไม่มีรายการตรงตัวกรอง</div>'}</div>`;
+}
+function haversine(a,b){const R=6371,d=x=>x*Math.PI/180;const dl=d(b.lat-a.lat),dg=d(b.lng-a.lng);const h=Math.sin(dl/2)**2+Math.cos(d(a.lat))*Math.cos(d(b.lat))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
+function locateMe(){navigator.geolocation.getCurrentPosition(p=>{S.pos={lat:p.coords.latitude,lng:p.coords.longitude};render()},()=>toast('ขอตำแหน่งไม่ได้ ลองเปิด Location ให้เบราว์เซอร์'),{enableHighAccuracy:true,timeout:8000})}
+function shareView(){
+  const link=location.origin+location.pathname+`?t=${S.tripId}&r=1`;
+  const sum={};S.items.filter(i=>['found','packed','delivered'].includes(i.status)).forEach(i=>sum[i.requester]=(sum[i.requester]||0)+(Number(i.paid||i.price)||0)*(Number(i.qty)||1));
+  return `<div class="card"><h2>ลิงค์สำหรับผู้ฝาก</h2><p class="muted">ส่งเข้ากลุ่ม เพื่อนกดแล้วกรอกได้เลย ไม่ต้องสมัคร</p>
+     <div class="share" style="margin:10px 0"><code>${esc(link)}</code><button class="btn sm" onclick="copyLink('${link}')">คัดลอก</button></div>
+     ${navigator.share?`<button class="btn block ghost" onclick="navigator.share({title:'ฝากซื้อกับ ${esc(S.trip.shopper)}',url:'${link}'})">แชร์…</button>`:''}</div>
+    <div class="card"><h2>ยอดที่ซื้อแล้ว (ประมาณ)</h2>${Object.keys(sum).length?Object.entries(sum).map(([n,v])=>`<div class="item"><div class="body"><div class="name">${esc(n)}</div></div><div>฿${fmt(v)}</div></div>`).join(''):'<p class="muted">ยังไม่มีของที่ซื้อแล้ว</p>'}<p class="muted" style="margin-top:8px">คิดจากราคาจริงที่กรอกตอนเปลี่ยนสถานะ ถ้าไม่กรอกจะใช้ราคาที่ผู้ฝากระบุ</p></div>`;
+}
+function copyLink(l){navigator.clipboard.writeText(l).then(()=>toast('คัดลอกลิงค์แล้ว'))}
+
+/* --- requester --- */
+function renderRequester(){
+  if(!S.me){shell(`<div class="card"><h2>สวัสดี 👋</h2><p class="muted">บอกชื่อไว้หน่อย ${esc(S.trip.shopper)} จะได้รู้ว่าใครฝาก</p><div class="field" style="margin-top:10px"><input id="meName" placeholder="ชื่อเล่นของคุณ"></div><button class="btn block" onclick="S.me=$('#meName').value.trim();if(!S.me)return toast('ใส่ชื่อก่อนนะ');LS('toast:me',S.me);render()">เริ่มฝากซื้อ</button></div>`);return;}
+  const mine=S.items.filter(i=>i.requester===S.me);
+  shell(`
+   <button class="btn block" style="margin-bottom:12px" onclick="openItemForm()">+ ฝากซื้อของ</button>
+   ${mine.length?`<div class="card">${mine.map(itemRow).join('')}</div>`:emptyState('ยังไม่มีรายการ','กดปุ่มด้านบนเพื่อฝากของชิ้นแรก')}
+   <p class="muted" style="text-align:center">ฝากในชื่อ <b>${esc(S.me)}</b> · <button class="btn ghost sm" onclick="S.me='';LS('toast:me','');render()">เปลี่ยนชื่อ</button></p>`);
+}
+function emptyState(t,s){return `<div class="empty"><img src="icons/icon-192.png" alt="" style="width:64px;height:64px;border-radius:14px;opacity:.7"><div>${esc(t)}</div><div class="muted">${esc(s)}</div></div>`}
+
+/* ---------- 7. sheets ---------- */
+function sheet(html){$('#sheetRoot').innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)closeSheet()"><div class="sheet" role="dialog"><div class="grip"></div>${html}</div></div>`}
+function closeSheet(){$('#sheetRoot').innerHTML=''}
+
+let photoData='',subPhotoData='';
+function openItemForm(){
+  photoData='';subPhotoData='';
+  const asShopper=S.role==='shopper';
+  sheet(`<h2>ฝากซื้อของ</h2>
+   ${asShopper?`<div class="field"><label>ชื่อผู้ฝาก</label><input id="fWho" placeholder="เพื่อนคนไหน"></div>`:''}
+   <div class="field"><label>รูปสินค้า</label><div class="photo-pick"><img id="fImg" alt=""><label class="btn ghost sm">เลือกรูป<input type="file" accept="image/*" hidden onchange="pickPhoto(this,'fImg','main')"></label></div></div>
+   <div class="field"><label>ชื่อสินค้า</label><input id="fName" placeholder="เช่น Kit Kat รสชาเขียว"></div>
+   <div class="row"><div class="field"><label>ราคาที่เห็น (฿)</label><input id="fPrice" inputmode="decimal"></div><div class="field"><label>จำนวน</label><input id="fQty" inputmode="numeric" value="1"></div></div>
+   <div class="field"><label>งบไม่เกิน (฿) ถ้าราคาต่างจากที่เห็น</label><input id="fBudget" inputmode="decimal" placeholder="เว้นว่างได้"></div>
+   <div class="field"><label>ประเภท</label><select id="fCat">${CATS.map(c=>`<option>${c}</option>`).join('')}</select></div>
+   <div class="field"><label>รายละเอียด / จุดสังเกต</label><textarea id="fDetail" placeholder="สี ขนาด รุ่น ห้ามซื้อแบบไหน"></textarea></div>
+   <div class="field"><label>ร้าน</label><input id="fShop" placeholder="ชื่อร้าน / สาขา"></div>
+   <div class="field"><label>ตำแหน่งร้าน</label><div class="row"><input id="fLoc" placeholder="วางลิงค์ Google Maps"><button class="btn ghost sm" style="flex:0;white-space:nowrap" onclick="useHere()">ตรงนี้</button></div></div>
+   <h3 style="margin:14px 0 8px">ถ้าหาไม่เจอ ให้ทำยังไง</h3>
+   ${Object.entries(FALLBACK).map(([k,v],i)=>`<label class="radio"><input type="radio" name="fb" value="${k}" ${i===1?'checked':''} onchange="$('#subBox').classList.toggle('hidden',this.value!=='substitute')"><span><b>${v}</b></span></label>`).join('')}
+   <div id="subBox" class="hidden card">
+     <h3>ของทดแทน</h3>
+     <div class="field"><label>รูป</label><div class="photo-pick"><img id="sImg" alt=""><label class="btn ghost sm">เลือกรูป<input type="file" accept="image/*" hidden onchange="pickPhoto(this,'sImg','sub')"></label></div></div>
+     <div class="field"><label>ชื่อสินค้า</label><input id="sName"></div>
+     <div class="row"><div class="field"><label>ราคา (฿)</label><input id="sPrice" inputmode="decimal"></div><div class="field"><label>จำนวน</label><input id="sQty" inputmode="numeric" value="1"></div></div>
+     <div class="field"><label>รายละเอียด</label><textarea id="sDetail"></textarea></div>
+     <div class="field"><label>ร้าน</label><input id="sShop"></div>
+   </div>
+   <button class="btn block" onclick="saveItem()">ฝากซื้อ</button>`);
+}
+function pickPhoto(inp,imgId,which){
+  const f=inp.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');const s=Math.min(1,720/Math.max(im.width,im.height));c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);const d=c.toDataURL('image/jpeg',.6);which==='main'?photoData=d:subPhotoData=d;$('#'+imgId).src=d;};im.src=r.result;};
+  r.readAsDataURL(f);
+}
+function useHere(){navigator.geolocation.getCurrentPosition(p=>{$('#fLoc').value=`${p.coords.latitude.toFixed(6)},${p.coords.longitude.toFixed(6)}`;toast('ใส่ตำแหน่งปัจจุบันแล้ว')},()=>toast('ขอตำแหน่งไม่ได้'))}
+function parseLoc(s){
+  s=(s||'').trim();if(!s)return null;
+  let m=s.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)||s.match(/[?&](?:q|query|ll)=(-?\d+\.\d+),(-?\d+\.\d+)/)||s.match(/^(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)$/);
+  return m?{lat:+m[1],lng:+m[2],mapUrl:/^https?:/.test(s)?s:`https://maps.google.com/?q=${m[1]},${m[2]}`}:{lat:null,lng:null,mapUrl:/^https?:/.test(s)?s:''};
+}
+async function saveItem(){
+  const who=S.role==='shopper'?$('#fWho').value.trim():S.me;
+  const name=$('#fName').value.trim();
+  if(!who||!name){toast('ใส่ชื่อผู้ฝากและชื่อสินค้าก่อน');return}
+  if(photoData.length>900000){toast('รูปใหญ่เกินไป ลองรูปอื่น');return}
+  const loc=parseLoc($('#fLoc').value)||{};
+  const fb=$('input[name=fb]:checked').value;
+  const it={id:uid(8),requester:who,name,photo:photoData,price:+$('#fPrice').value||null,budget:+$('#fBudget').value||null,qty:+$('#fQty').value||1,cat:$('#fCat').value,detail:$('#fDetail').value.trim(),shop:$('#fShop').value.trim(),lat:loc.lat??null,lng:loc.lng??null,mapUrl:loc.mapUrl||'',fallback:fb,status:'requested',log:[{s:'requested',at:Date.now()}]};
+  if(fb==='substitute')it.substitute={name:$('#sName').value.trim(),photo:subPhotoData,price:+$('#sPrice').value||null,qty:+$('#sQty').value||1,detail:$('#sDetail').value.trim(),shop:$('#sShop').value.trim()};
+  await store.addItem(S.tripId,it);closeSheet();toast('ฝากแล้ว 🍞');
+}
+
+function openItem(id){
+  const i=S.items.find(x=>x.id===id);if(!i)return;
+  const isShopper=S.role==='shopper';const off=['cancelled','notfound'].includes(i.status);
+  const next=FLOW[FLOW.indexOf(i.status)+1];
+  const sub=i.substitute&&i.substitute.name?`<div class="card"><h3>ของทดแทนถ้าหาไม่เจอ</h3><div class="item">${i.substitute.photo?`<img class="thumb" src="${i.substitute.photo}">`:'<div class="thumb">🔁</div>'}<div class="body"><div class="name">${esc(i.substitute.name)} <span class="muted">×${i.substitute.qty}</span></div><div class="meta">${i.substitute.price?'฿'+fmt(i.substitute.price)+' · ':''}${esc(i.substitute.shop||'')}</div><div class="muted">${esc(i.substitute.detail||'')}</div></div></div></div>`:'';
+  sheet(`
+   ${i.photo?`<img src="${i.photo}" style="width:100%;max-height:260px;object-fit:cover;border-radius:16px;margin-bottom:12px" alt="">`:''}
+   <h2>${esc(i.name)} <span class="muted">×${i.qty}</span></h2>
+   <p class="muted">ฝากโดย ${esc(i.requester)} · ${esc(i.cat)}</p>
+   <div style="margin:8px 0"><span class="st ${i.status}">${STATUS[i.status]}</span></div>
+   <div class="card">
+     ${i.price?`<div>ราคาที่เห็น ฿${fmt(i.price)}${i.budget?` · งบไม่เกิน ฿${fmt(i.budget)}`:''}</div>`:''}
+     ${i.detail?`<div style="margin-top:4px">${esc(i.detail)}</div>`:''}
+     ${i.shop||i.mapUrl?`<div class="meta" style="margin-top:6px">📍 ${esc(i.shop||'ร้าน')} ${i.mapUrl?`<a href="${esc(i.mapUrl)}" target="_blank" rel="noopener">เปิดแผนที่</a>`:''}</div>`:''}
+     <div class="muted" style="margin-top:6px">ถ้าหาไม่เจอ: ${FALLBACK[i.fallback]}</div>
+   </div>
+   ${sub}
+   ${i.paid?`<p class="muted">ซื้อจริง ฿${fmt(i.paid)}</p>`:''}
+   ${i.note?`<p class="muted">หมายเหตุจากผู้รับฝาก: ${esc(i.note)}</p>`:''}
+   <ul class="timeline">${(i.log||[]).map(l=>`<li>${STATUS[l.s]} · ${new Date(l.at).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'})}</li>`).join('')}</ul>
+   ${isShopper&&!off&&next?`<div style="margin-top:14px">${i.status==='requested'?`<div class="field"><label>ราคาที่ซื้อจริง (฿) — ใส่หรือไม่ก็ได้</label><input id="uPaid" inputmode="decimal" value="${i.paid||''}"></div>`:''}<button class="btn block" onclick="setStatus('${i.id}','${next}')">${next==='delivered'?'🥂 ':''}→ ${STATUS[next]}</button></div>`:''}
+   ${isShopper&&!off?`<div class="row" style="margin-top:8px"><button class="btn danger" onclick="setStatus('${i.id}','notfound')">หาไม่ได้</button><button class="btn ghost" onclick="setStatus('${i.id}','cancelled')">ยกเลิก</button></div>`:''}
+   ${isShopper&&off?`<button class="btn ghost block" style="margin-top:8px" onclick="setStatus('${i.id}','requested')">เปิดรายการใหม่</button>`:''}
+   ${!isShopper&&i.status==='requested'?`<button class="btn danger block" style="margin-top:14px" onclick="setStatus('${i.id}','cancelled')">ยกเลิกรายการนี้</button>`:''}
+   ${!isShopper&&i.status!=='requested'?`<p class="muted" style="margin-top:12px">${esc(S.trip.shopper)} รับเรื่องแล้ว ถ้าจะแก้ไข ทักไปบอกโดยตรงนะ</p>`:''}`);
+}
+async function setStatus(id,s){
+  const i=S.items.find(x=>x.id===id);
+  const patch={status:s,log:[...(i.log||[]),{s,at:Date.now()}]};
+  const p=$('#uPaid');if(p&&p.value)patch.paid=+p.value;
+  await store.updateItem(S.tripId,id,patch);closeSheet();
+  toast(s==='delivered'?'🥂 ถึงมือแล้ว!':'อัปเดตเป็น "'+STATUS[s]+'"');
+}
+
+/* ---------- 8. settings ---------- */
+function openSettings(){
+  const th=document.documentElement.dataset.theme;
+  sheet(`<h2>ตั้งค่า</h2>
+   <div class="field"><label>ธีมสี</label><div class="chips"><button class="chip ${th==='tangerine'?'on':''}" onclick="setTheme('tangerine')">🍊 Tangerine</button><button class="chip ${th==='matcha'?'on':''}" onclick="setTheme('matcha')">🍵 Matcha</button></div></div>
+   ${S.trip&&S.role==='requester'?`<div class="field"><label>คุณคือผู้รับฝากของทริปนี้? ใส่ PIN เพื่อเข้าหน้าผู้รับฝาก</label><div class="row"><input id="pinIn" inputmode="numeric" placeholder="PIN"><button class="btn sm" style="flex:0" onclick="enterPin()">เข้า</button></div></div>`:''}
+   ${S.trip&&S.role==='shopper'?`<a class="btn ghost block" href="?t=${S.tripId}&r=1">ดูหน้าแบบผู้ฝาก</a>`:''}
+   <a class="btn ghost block" style="margin-top:8px" href="./">หน้าแรก / ทริปอื่น</a>
+   <div class="ver">Toast v${VERSION} · ${store.online?'เชื่อมต่อ Firebase':'โหมดทดลองในเครื่อง — ใส่ FIREBASE_CONFIG เพื่อใช้ร่วมกับเพื่อน'}</div>`);
+}
+function setTheme(t){document.documentElement.dataset.theme=t;LS('toast:theme',t);$('meta[name=theme-color]').content=t==='matcha'?'#C5E1A5':'#FFC46B';openSettings()}
+async function enterPin(){const h=await sha($('#pinIn').value.trim());if(h!==S.trip.pinHash){toast('PIN ไม่ถูกต้อง');return}LS('toast:pin:'+S.tripId,h);location.href=`?t=${S.tripId}`}
+
+/* ---------- 9. PWA ---------- */
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').then(reg=>{reg.addEventListener('updatefound',()=>{const w=reg.installing;w&&w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)w.postMessage('SKIP_WAITING')})})});let refreshed=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!refreshed){refreshed=true;location.reload()}})}
+boot();
+</script>
+</body>
+</html>

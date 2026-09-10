@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ทริป: ใครมี tripId (สุ่ม 10 ตัว) ก็อ่านได้ / สร้างได้ / แก้ได้ยกเว้น pinHash
+    match /trips/{tripId} {
+      allow read, create: if true;
+      allow update: if request.resource.data.pinHash == resource.data.pinHash;
+      allow delete: if false;
+      // รายการฝากซื้อ: จำกัดขนาด doc (รูป base64) ไม่เกิน ~900KB
+      match /items/{itemId} {
+        allow read, create, update: if request.resource == null || request.resource.data.size() < 40;
+        allow delete: if false;
+      }
+    }
+  }
+}
