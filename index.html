@@ -100,7 +100,7 @@
 main.hasfab{padding-bottom:150px}
 .smallcard.row{border-top:1px solid var(--line)}
 .swipe:first-child .row{border-top:0}
-.approx{font-size:12px;color:var(--ink-2);margin:2px 0 0;min-height:0}
+.approx{font-size:12px;color:var(--ink-2);margin:2px 0 0;min-height:16px}
 .money small{font-size:11px;color:var(--ink-2);margin-left:4px}
 .seg{display:flex;background:rgba(255,255,255,.6);border:1.5px solid var(--line);border-radius:999px;padding:3px;margin-bottom:10px}
 .seg button{flex:1;padding:7px;border-radius:999px;font-weight:500;color:var(--ink-2)}
@@ -171,7 +171,9 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 .field input[type=date]{height:38px}
 .field textarea{min-height:72px;resize:vertical}
 .field input:focus,.field select:focus,.field textarea:focus,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.row{display:flex;gap:8px;align-items:flex-end}.row>*{flex:1;min-width:0}.row>.btn{flex:0 0 auto;white-space:nowrap}
+.row{display:flex;gap:8px;align-items:flex-start}
+.row>.field{display:flex;flex-direction:column}
+.row>.field>input,.row>.field>select{margin-top:auto}.row>*{flex:1;min-width:0}.row>.btn{flex:0 0 auto;white-space:nowrap}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .chip{padding:6px 12px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-size:14px;min-height:34px}
 .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
@@ -257,7 +259,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='4.8';
+const VERSION='4.9';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -311,6 +313,16 @@ async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncod
 const Q=new URLSearchParams(location.search);
 const REQPREVIEW=/requester/.test(location.pathname);
 const EN=[
+["เลื่อนซ้ายเพื่อลบกระเป๋า","Swipe left to delete a bag"],
+["พิมพ์ชื่อกระเป๋าเพื่อยืนยัน","Type the bag name to confirm"],
+["ลบแล้วเอากลับมาไม่ได้ และลิงค์ที่แชร์ไปจะใช้ไม่ได้อีก","This can't be undone, and shared links will stop working"],
+["ลบกระเป๋านี้","Delete this bag"],
+["ลบกระเป๋าแล้ว","Bag deleted"],
+["ลบกระเป๋า","Delete bag"],
+["ลบถาวร","Delete permanently"],
+["ชื่อไม่ตรง ลองอีกที","Name doesn't match — try again"],
+["มีของอยู่","It holds"],
+["ชิ้นจากเพื่อน","items from"],
 ["ปิดกระเป๋าแล้ว ถ้ามีอะไรด่วน ทัก","The bag's closed — message"],
 ["ได้เลย","directly if something's urgent"],
 ["เช่น ของเกิน 5,000 บาท ขอมัดจำครึ่งหนึ่ง","e.g. Deposit half for items over 5,000 THB"],
@@ -819,14 +831,14 @@ function bagsView(err,linkCard){
       <div class="icons"><span>${ic('users',15)} ${ppl} คน</span><span>${ic('bag',15)} ${its.length} รายการ</span><span>${ic('check',15)} ${found} เจอแล้ว</span></div>
       <div class="foot"><span>ยอดซื้อทั้งหมด ${t.currency||'THB'} ${fmt(spent)}</span><span class="pill">${t.close&&t.close<=today?'กำลังช็อป':'ฝากมาอีกได้เลย'}</span></div></div>`};
   const small=t=>{const its=itemCounts[t.id]||[];let pill='';if(t.recv&&t.recv>=today)pill=`รับของในอีก ${daysTo(t.recv)} วัน`;else if(t.recv&&t.recv<today)pill='ส่งแล้ว';else pill='ไม่ระบุวัน';
-    return `<div class="smallcard" onclick="location.href='?t=${t.id}'"><div><div class="n">${esc(t.name)}</div><div class="m">${t.recv?'รับของ '+dfmt(t.recv)+' · ':''}${its.length} รายการ · ${esc(t.currency||'THB')}</div></div><span class="pill">${pill}</span></div>`};
+    return `<div class="swipe" data-id="${t.id}"><div class="del" onclick="event.stopPropagation();askDelBag('${t.id}')">ลบ</div><div class="srow" onclick="location.href='?t=${t.id}'"><div class="sbody"><div class="n">${esc(t.name)}</div><div class="m">${t.recv?'รับของ '+dfmt(t.recv)+' · ':''}${its.length} รายการ · ${esc(t.currency||'THB')}</div></div><span class="pill">${pill}</span></div></div>`};
   const lists={future,past,undated};const cur=lists[bagFilter]||[];
   return `<div class="home-head"><img src="${ICON}" alt=""><div style="flex:1"><div class="app">Toast</div><div class="muted">${greet()} ${esc(S.user.displayName||'')}<br>กระเป๋ายังมีที่ว่างให้คุณนะ</div></div><button class="btn sm" style="width:44px;padding:0;font-size:24px;line-height:1" onclick="openCreate()" aria-label="กระเป๋าใหม่">+</button></div>
    ${err?`<div class="card" style="border-color:#FCA5A5">${esc(err)}</div>`:''}
-   ${now.length?(now.length>1?`<div class="hscroll">${now.map(big).join('')}</div>`:big(now[0])):''}
+   ${(setTimeout(bindSwipes,0),'')}${now.length?(now.length>1?`<div class="hscroll">${now.map(big).join('')}</div>`:big(now[0])):''}
    <div class="search">${ic('search',18)}<input id="qIn" placeholder="ค้นหากระเป๋า ที่หมาย หรือของที่ฝาก" value="${esc(S.q||'')}" oninput="S.q=this.value;renderLanding().then(()=>{const e=$('#qIn');e.focus();e.setSelectionRange(e.value.length,e.value.length)})"></div>
    <div class="seg3">${[['future','เร็ว ๆ นี้'],['past','ที่ผ่านมา'],['undated','ยังไม่ระบุวัน']].map(([k,l])=>`<button class="${bagFilter===k?'on':''}" onclick="bagFilter='${k}';renderLanding()">${l}</button>`).join('')}</div>
-   <div class="card">${cur.length?cur.map(small).join(''):'<div class="empty">ในนี้ยังว่าง</div>'}</div>
+   ${cur.length?cur.map(small).join('')+`<p class="muted" style="text-align:center;font-size:12px;margin-top:-2px">เลื่อนซ้ายเพื่อลบกระเป๋า</p>`:'<div class="card"><div class="empty">ในนี้ยังว่าง</div></div>'}
    ${now.length?'':`<button class="btn soft block" style="border-radius:14px;min-height:52px" onclick="openCreate()">${ic('plus',18)} กระเป๋าใหม่</button>`}
 `;
 }
@@ -881,7 +893,9 @@ function openEdit(){
    <div class="field"><label>เงื่อนไขมัดจำ</label><input id="eDeposit" value="${esc(t.deposit||'')}" placeholder="เช่น ของเกิน 5,000 บาท ขอมัดจำครึ่งหนึ่ง"></div>
    <div class="field"><label>ข้อความถึงเพื่อน</label><textarea id="eNote" placeholder="เช่น ของเหลวไม่รับนะ · ของหนักคิดเพิ่ม">${esc(t.note||'')}</textarea></div>
    <button class="btn block" onclick="saveEdit()">บันทึก</button>
-   <a class="btn ghost block" style="margin-top:8px" href="?t=${S.tripId}&r=1">ดูมุมของเพื่อน</a>`);
+   <a class="btn ghost block" style="margin-top:8px" href="?t=${S.tripId}&r=1">ดูมุมของเพื่อน</a>
+   <div style="border-top:1px solid var(--line);margin:14px 0 10px"></div>
+   <button class="btn danger block" onclick="askDelBag('${S.tripId}')">ลบกระเป๋านี้</button>`);
   feeUI();feeModeUI();
 }
 function feeModeUI(){$('#flatBox').classList.toggle('hidden',feeMode!=='flat');$('#catBox').classList.toggle('hidden',feeMode!=='cat');document.querySelectorAll('.seg3')[0].querySelectorAll('button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(feeMode==='flat')));if(feeMode==='cat')drawCatRows()}
@@ -890,6 +904,26 @@ function delCat(i){const c=catList[i];catList.splice(i,1);delete catFees[c];cust
 function cycleCat(i){const c=catList[i];const order=FEE_TYPES.map(x=>x[0]);const cur=(catFees[c]&&catFees[c].type)||'none';const nx=order[(order.indexOf(cur)+1)%order.length];catFees[c]=Object.assign({},catFees[c],{type:nx});if(nx==='none'||nx==='blocked')catFees[c].value=0;drawCatRows()}
 function setCatVal(i,v){const c=catList[i];catFees[c]=Object.assign({type:'perItem'},catFees[c],{value:+v||0})}
 function doAddCat(){const el=$('#newCatName');const n=el.value.trim();if(!n)return;if(catList.includes(n))return toast('มีหมวดนี้แล้ว');catList.push(n);catFees[n]={type:'perItem',value:0};customCats.push(n);el.value='';drawCatRows();}
+function askDelBag(id){
+  const t=(myTripsCache||[]).find(x=>x.id===id)||(S.trip&&S.trip.id===id?S.trip:null);if(!t)return;
+  const its=(itemCounts||{})[id]||[];const ppl=new Set(its.map(i=>i.requester)).size;
+  sheet(`<h2>ลบกระเป๋า ${esc(t.name)}?</h2>
+   <p class="muted" style="line-height:1.7">${its.length?`มีของอยู่ ${its.length} ชิ้นจากเพื่อน ${ppl} คน · `:''}ลบแล้วเอากลับมาไม่ได้ และลิงค์ที่แชร์ไปจะใช้ไม่ได้อีก</p>
+   <div class="field" style="margin-top:10px"><label>พิมพ์ชื่อกระเป๋าเพื่อยืนยัน</label><input id="delName" placeholder="${esc(t.name)}" autocapitalize="none"></div>
+   <button class="btn danger block" onclick="doDelBag('${id}')">ลบถาวร</button>
+   <button class="btn ghost block" style="margin-top:8px" onclick="closeSheet()">ยกเลิก</button>`);
+  setTimeout(()=>$('#delName')&&$('#delName').focus(),50);
+}
+async function doDelBag(id){
+  const t=(myTripsCache||[]).find(x=>x.id===id)||S.trip;
+  if(($('#delName').value||'').trim()!==(t.name||'').trim())return toast('ชื่อไม่ตรง ลองอีกที');
+  try{await store.deleteTrip(id);
+    myTripsCache=(myTripsCache||[]).filter(x=>x.id!==id);if(itemCounts)delete itemCounts[id];
+    S.user&&LS('toast:cache:'+S.user.uid,null);
+    closeSheet();toast('ลบกระเป๋าแล้ว');
+    if(S.trip&&S.trip.id===id){location.href='./';}else renderLanding();
+  }catch(e){toast('ลบไม่ได้: '+(e.code||e.message))}
+}
 async function saveEdit(){const name=$('#eName').value.trim();if(!name)return toast('ใส่ปลายทางก่อนนะ');const patch={name,recv:$('#eRecv').value||null,close:$('#eClose').value||null,rate:+$('#eRate').value||S.trip.rate||1,feeMode,cats:catList,catFees,fee:{type:feeType,value:feeType==='none'?0:(+($('#tFee')||{}).value||0)},deposit:$('#eDeposit').value.trim()||null,note:$('#eNote').value.trim()};
   try{await store.updateTrip(S.tripId,patch);Object.assign(S.trip,patch);S.user&&LS('toast:cache:'+S.user.uid,null);closeSheet();toast('บันทึกแล้ว');render()}catch(e){toast('บันทึกไม่ได้: '+(e.code||e.message))}}
 function feeUI(){const t=FEE_TYPES.find(x=>x[0]===feeType);$('#feeVal').classList.toggle('hidden',feeType==='none');$('#feeLbl').textContent=t[2]}
