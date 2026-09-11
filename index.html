@@ -79,7 +79,7 @@
 .rows .rw:first-child{border-top:0}
 .rows .rw .v{color:var(--ink-2);font-size:14px}
 .ic{vertical-align:-3px;flex:none}
-.vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
+.vh{position:absolute;left:0;top:0;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0 0 0 0);pointer-events:none}
 .fab{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));display:flex;justify-content:center;pointer-events:none;z-index:5}
 .fab .btn{pointer-events:auto;max-width:560px;width:calc(100% - 32px);box-shadow:0 4px 14px rgba(58,36,21,.12)}
 .fab .card{pointer-events:auto;max-width:560px;width:calc(100% - 32px);margin:0;box-shadow:0 4px 14px rgba(58,36,21,.12)}
@@ -224,9 +224,11 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 .landing header.top{display:none}
 
 /* sheet */
-.sheet-bg{position:fixed;inset:0;background:rgba(58,36,21,.45);display:flex;align-items:flex-end;justify-content:center;z-index:50}
-.sheet{background:var(--bg);width:100%;max-width:560px;height:auto;max-height:90vh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;border-radius:24px 24px 0 0;padding:16px var(--pad) calc(24px + env(safe-area-inset-bottom))}
+.sheet-bg{position:fixed;inset:0;background:rgba(58,36,21,.45);display:flex;align-items:flex-end;justify-content:center;z-index:50;overflow:hidden;touch-action:none}
+.sheet{background:var(--bg);width:100%;max-width:560px;height:auto;max-height:90vh;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;border-radius:24px 24px 0 0;padding:16px var(--pad) calc(24px + env(safe-area-inset-bottom))}
 .sheet{position:relative}
+.sheet *{max-width:100%}
+.sheet .row{flex-wrap:nowrap}
 .sheet .grip{width:44px;height:5px;border-radius:3px;background:var(--line);margin:0 auto;cursor:grab;position:relative}
 .sheet .grip::after{content:'';position:absolute;left:-120px;right:-120px;top:-12px;bottom:-14px}
 .sheet h2{margin-top:12px}
@@ -264,7 +266,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='5.1';
+const VERSION='5.3';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -345,7 +347,7 @@ const EN=[
 ["รับไว้แล้วนะ ถ้ามีอะไรเปลี่ยน ทักมาบอกได้เลย","has your list — message them to change anything"],
 ["ถ้าคุณคือผู้รับฝาก ให้เข้าสู่ระบบที่หน้าแรก","If this is your bag, log in from the home screen"],
 ["ไม่พบกระเป๋านี้ ลิงค์อาจผิดหรือถูกลบไปแล้ว","Can't find this bag — the link may be wrong or the bag may have been deleted"],
-["กดลิงค์ที่เพื่อนส่งมา หรือวางลิงค์ด้านล่าง","Tap a friend's link, or paste one below"],
+["เมื่อฝากเพื่อนซื้อของ รายการจะมาอยู่ตรงนี้","Things you ask friends to get will show up here"],
 ["สี ไซซ์ รุ่น หรือรายละเอียดที่อยากกำชับ","Colour, size, model, or what to avoid"],
 ["เช่น ของเหลวไม่รับนะ · ของหนักคิดเพิ่ม","e.g. No liquids · Heavy items cost extra"],
 ["เพื่อใช้เป็นแอพ · ไม่จำเป็นต้องมีบัญชี","to use it like an app · friends don't need an account"],
@@ -368,10 +370,10 @@ const EN=[
 ["เปิดใน Safari/Chrome แล้ว","Open in Safari/Chrome"],
 ["ลองผิดหลายครั้ง รอสักครู่","Too many tries — take a short break"],
 ["กรอกชื่อผู้ใช้และรหัสผ่าน","Enter your username and password"],
-["กระเป๋าเพื่อนที่ฉันฝากไว้","Bags you've added to"],
+["ของที่อยากฝากเพื่อนซื้อ","Things I'd love them to bring back"],
 ["คัดลองลิงค์แล้ว ส่งได้เลย","Link copied — go share it"],
 ["ชื่อผู้ใช้นี้มีคนใช้แล้ว","That username is taken"],
-["ยังไม่ส่งรายการช็อปมาเลย","You haven't sent a list yet"],
+["ยังไม่มีอะไรในรายการ","Nothing here yet"],
 ["ลบรายการที่จบแล้วทั้งหมด","Delete all finished items"],
 ["+ ระบุสินค้าอื่นโดยเฉพาะ","+ Add a specific item type"],
 ["เลื่อนซ้ายเพื่อลบรายการ","Swipe left to remove"],
@@ -380,7 +382,7 @@ const EN=[
 ["ส่งให้เพื่อนไว้เพิ่มคุณ","Share it so friends can add you"],
 ["มาเป็นเพื่อนกันใน Toast","Add me on Toast"],
 ["เช่น Kit Kat รสชาเขียว","e.g. Matcha Kit Kat"],
-["วางลิงค์ที่เพื่อนส่งมา","Paste a friend's link"],
+["ลิงก์จากเพื่อน","Friend's link"],
 ["เอาตัวสำรองที่เลือกไว้","Grab my backup pick"],
 ["ถ้าหาไม่เจอ เอายังไงดี","If it's not there…"],
 ["น้ำหนักโดยประมาณ (กก.)","Approx. weight (kg)"],
@@ -485,7 +487,7 @@ const EN=[
 ["โอนมัดจำก่อน","Pay deposit first"],
 ["แก้ไขกระเป๋า","Edit bag"],
 ["ในนี้ยังว่าง","Nothing here yet"],
-["รายการที่ชอบ","Wishlist"],
+["ของที่ฝาก","My Requests"],
 ["เครื่องสำอาง","Beauty"],
 ["รหัสผ่านใหม่","New password"],
 ["ส่งให้เพื่อน","Send my ID"],
@@ -775,7 +777,7 @@ function homeTabs(){
   const t=(id,label,svg)=>`<button class="${(homeTab===id||(id==='profile'&&homeTab==='friends'))?'on':''}" onclick="homeTab='${id}';LS('toast:homeTab','${id}');renderLanding()">${svg}<span>${label}</span></button>`;
   return `<nav class="tabs"><div class="inner">
    ${t('bags','กระเป๋า','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>')}
-   ${t('request','รายการที่ชอบ','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16l-2 12H6z"/><path d="M9 11v-4a3 3 0 0 1 6 0v4"/><path d="M9 15h6"/></svg>')}
+   ${t('request','ของที่ฝาก','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16l-2 12H6z"/><path d="M9 11v-4a3 3 0 0 1 6 0v4"/><path d="M9 15h6"/></svg>')}
    ${t('profile','โปรไฟล์','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>')}
   </div></nav>`;
 }
@@ -856,10 +858,10 @@ function requestView(linkCard){
   const done=r=>r.recv&&r.recv<today;
   const row=r=>`<div class="swipe" data-id="${r.id}"><div class="del" onclick="hideReq('${r.id}')">ลบ</div><div class="srow" onclick="${reqSel?`toggleSel('${r.id}')`:`location.href='?t=${r.id}&r=1'`}">${reqSel?`<span class="selc ${reqSel.has(r.id)?'on':''}">${reqSel.has(r.id)?ic('check',14):''}</span>`:''}<div class="sbody"><div class="n">${esc(r.name)}</div><div class="m">ฝากกับ ${esc(r.shopper||'')}${r.recv?' · รับของ '+dfmt(r.recv):''}${done(r)?' · ได้ของแล้ว':''}</div></div></div></div>`;
   setTimeout(bindSwipes,0);
-  return `<div class="home-head"><img src="${ICON}" alt=""><div style="flex:1"><div class="app">รายการที่ชอบ</div><div class="muted">กระเป๋าเพื่อนที่ฉันฝากไว้</div></div>${recent.length?`<button class="btn ghost sm" onclick="reqSel=reqSel?null:new Set();renderLanding()">${reqSel?'เสร็จ':'เลือก'}</button>`:''}</div>
+  return `<div class="home-head"><img src="${ICON}" alt=""><div style="flex:1"><div class="app">ของที่ฝาก</div><div class="muted">ของที่อยากฝากเพื่อนซื้อ</div></div>${recent.length?`<button class="btn ghost sm" onclick="reqSel=reqSel?null:new Set();renderLanding()">${reqSel?'เสร็จ':'เลือก'}</button>`:''}</div>
    ${reqSel&&reqSel.size?`<button class="btn danger block" style="margin-bottom:10px" onclick="hideSelected()">ลบ ${reqSel.size} รายการ</button>`:''}
-   ${recent.length?recent.map(row).join('')+`<p class="muted" style="text-align:center;font-size:12px">เลื่อนซ้ายเพื่อลบรายการ</p>`:emptyState('ยังไม่ส่งรายการช็อปมาเลย','กดลิงค์ที่เพื่อนส่งมา หรือวางลิงค์ด้านล่าง')}
-   <div class="linkbar"><div class="inner"><input id="tLink" placeholder="วางลิงค์ที่เพื่อนส่งมา"><button class="btn sm" onclick="openLink()">ไป</button></div></div>`;
+   ${recent.length?recent.map(row).join('')+`<p class="muted" style="text-align:center;font-size:12px">เลื่อนซ้ายเพื่อลบรายการ</p>`:emptyState('ยังไม่มีอะไรในรายการ','เมื่อฝากเพื่อนซื้อของ รายการจะมาอยู่ตรงนี้')}
+   <div class="linkbar"><div class="inner"><input id="tLink" placeholder="ลิงก์จากเพื่อน"><button class="btn sm" onclick="openLink()">ไป</button></div></div>`;
 }
 function bindSwipes(){document.querySelectorAll('.swipe').forEach(el=>{let x0=null;el.ontouchstart=e=>{x0=e.touches[0].clientX};el.ontouchmove=e=>{if(x0===null)return;const dx=e.touches[0].clientX-x0;if(dx<-40){el.classList.add('open');document.querySelectorAll('.swipe.open').forEach(o=>{if(o!==el)o.classList.remove('open')})}else if(dx>20)el.classList.remove('open')};el.ontouchend=()=>{x0=null}})}
 function hideReq(id){const hd=new Set(LS('toast:hiddenReq')||[]);hd.add(id);LS('toast:hiddenReq',[...hd]);LS('toast:recent',(LS('toast:recent')||[]).filter(r=>r.id!==id));toast('ลบออกจากรายการแล้ว');renderLanding()}
@@ -1180,7 +1182,7 @@ function openItemForm(){
      <div class="field"><label>รายละเอียด</label><textarea id="sDetail"></textarea></div>
      <div class="field"><label>ร้านค้า</label><input id="sShop"></div>
    </div>
-   <button class="btn block" onclick="saveItem()">รายการที่ชอบ</button>`);
+   <button class="btn block" onclick="saveItem()">ของที่ฝาก</button>`);
 }
 function fbUI(v){$('#subBox').classList.toggle('hidden',v!=='substitute');$('#contactBox').classList.toggle('hidden',v!=='contact')}
 function pickCat(b){[...b.parentNode.children].forEach(x=>x.classList.remove('on'));b.classList.add('on');wUI()}
