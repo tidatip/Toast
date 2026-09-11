@@ -225,9 +225,11 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 
 /* sheet */
 .sheet-bg{position:fixed;inset:0;background:rgba(58,36,21,.45);display:flex;align-items:flex-end;justify-content:center;z-index:50}
-.sheet{background:var(--bg);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;padding:16px var(--pad) calc(24px + env(safe-area-inset-bottom))}
+.sheet{background:var(--bg);width:100%;max-width:560px;height:auto;max-height:90vh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;border-radius:24px 24px 0 0;padding:16px var(--pad) calc(24px + env(safe-area-inset-bottom))}
 .sheet{position:relative}
-.sheet .grip{width:44px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 12px;cursor:grab}
+.sheet .grip{width:44px;height:5px;border-radius:3px;background:var(--line);margin:0 auto;cursor:grab;position:relative}
+.sheet .grip::after{content:'';position:absolute;left:-120px;right:-120px;top:-12px;bottom:-14px}
+.sheet h2{margin-top:12px}
 .sheetx{position:absolute;top:8px;right:10px;width:34px;height:34px;border-radius:50%;background:var(--accent-soft);color:var(--ink-2);font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;z-index:2}
 .sheet h2{padding-right:40px}
 .sheet h2{margin-bottom:12px}
@@ -262,7 +264,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='5.0';
+const VERSION='5.1';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -1142,7 +1144,13 @@ function emptyState(t,s){return `<div class="empty"><img src="${ICON}" alt="" st
 
 /* ---------- 7. sheets ---------- */
 function sheet(html){$('#sheetRoot').innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)closeSheet()"><div class="sheet" role="dialog"><button class="sheetx" onclick="closeSheet()" aria-label="ปิด">×</button><div class="grip"></div>${tr(html)}</div></div>`;bindSheetDrag()}
-function bindSheetDrag(){const s=$('.sheet');if(!s)return;let y0=null,t0=0;const on=e=>{if(s.scrollTop>0)return;y0=e.touches[0].clientY;t0=Date.now()};const mv=e=>{if(y0===null)return;const dy=e.touches[0].clientY-y0;if(dy>0&&s.scrollTop<=0){s.style.transform=`translateY(${Math.min(dy,400)}px)`;if(dy>6)e.preventDefault()}};const end=()=>{if(y0===null)return;const m=/translateY\(([0-9.]+)px\)/.exec(s.style.transform||"");const dy=m?+m[1]:0;s.style.transition='transform .18s';if(dy>110||(dy>40&&Date.now()-t0<250)){s.style.transform='translateY(100%)';setTimeout(closeSheet,160)}else s.style.transform='';setTimeout(()=>s.style.transition='',200);y0=null};s.addEventListener('touchstart',on,{passive:true});s.addEventListener('touchmove',mv,{passive:false});s.addEventListener('touchend',end)}
+function bindSheetDrag(){const s=$('.sheet'),g=$('.sheet .grip');if(!s||!g)return;let y0=null,t0=0;
+  const on=e=>{y0=e.touches[0].clientY;t0=Date.now();s.style.transition=''};
+  const mv=e=>{if(y0===null)return;const dy=e.touches[0].clientY-y0;if(dy>0){s.style.transform=`translateY(${Math.min(dy,500)}px)`;e.preventDefault()}};
+  const end=()=>{if(y0===null)return;const m=/translateY\(([0-9.]+)px\)/.exec(s.style.transform||"");const dy=m?+m[1]:0;s.style.transition='transform .18s';
+    if(dy>100||(dy>36&&Date.now()-t0<260)){s.style.transform='translateY(100%)';setTimeout(closeSheet,160)}else s.style.transform='';y0=null};
+  g.style.touchAction='none';g.addEventListener('touchstart',on,{passive:true});g.addEventListener('touchmove',mv,{passive:false});g.addEventListener('touchend',end);
+  const head=s.querySelector('h2');if(head){head.style.touchAction='none';head.addEventListener('touchstart',on,{passive:true});head.addEventListener('touchmove',mv,{passive:false});head.addEventListener('touchend',end)}}
 function closeSheet(){$('#sheetRoot').innerHTML=''}
 
 let photoData='',subPhotoData='';
