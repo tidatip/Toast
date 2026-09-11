@@ -82,13 +82,13 @@
 .linkbar .inner{display:flex;gap:8px;width:100%;max-width:560px;padding:8px 16px}
 .linkbar input{flex:1;min-width:0;padding:7px 12px;border:1.5px solid var(--line);border-radius:12px;height:38px;background:var(--card)}
 .linkbar .btn{height:38px;min-height:38px;padding:0 16px}
-.swipe{position:relative;overflow:hidden}
-.swipe .del{position:absolute;right:0;top:0;bottom:0;width:84px;background:#FEE2E2;color:#B91C1C;display:flex;align-items:center;justify-content:center;font-weight:500}
-.swipe .row{position:relative;background:#FFFEF7;transition:transform .2s;padding:10px 0}
-:root[data-mode=dark] .swipe .row{background:#2A241B}
-.swipe .del{z-index:0}
-.swipe.open .row{transform:translateX(-84px)}
-.selbox{width:22px;height:22px;margin-right:10px;flex:none}
+.swipe{position:relative;overflow:hidden;border-radius:var(--r);margin-bottom:10px}
+.swipe .del{position:absolute;right:0;top:0;bottom:0;width:84px;background:#FEE2E2;color:#B91C1C;display:flex;align-items:center;justify-content:center;font-weight:500;border-radius:0 var(--r) var(--r) 0;z-index:0}
+.swipe .row{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--r);transition:transform .2s;padding:12px 14px;display:flex;align-items:center;gap:10px}
+.swipe.open .row{transform:translateX(-92px)}
+.swipe .pill{flex:none}
+.selc{width:24px;height:24px;min-width:24px;border-radius:50%;border:1.5px solid var(--ink-2);flex:0 0 24px;display:flex;align-items:center;justify-content:center;color:#fff}
+.selc.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 main.hasfab{padding-bottom:150px}
 .smallcard.row{border-top:1px solid var(--line)}
 .swipe:first-child .row{border-top:0}
@@ -493,11 +493,11 @@ function requestView(linkCard){
   const recent=(S.myReq||LS('toast:recent')||[]).filter(r=>!hidden.has(r.id));
   const today=todayStr();
   const done=r=>r.recv&&r.recv<today;
-  const row=r=>`<div class="swipe" data-id="${r.id}"><div class="del" onclick="hideReq('${r.id}')">ลบ</div><div class="row smallcard" onclick="${reqSel?`toggleSel('${r.id}')`:`location.href='?t=${r.id}&r=1'`}">${reqSel?`<input type="checkbox" class="selbox" ${reqSel.has(r.id)?'checked':''} onclick="event.stopPropagation();toggleSel('${r.id}')">`:''}<div style="flex:1"><div class="n">${esc(r.name)}</div><div class="m">ฝากกับ ${esc(r.shopper||'')}${r.recv?' · รับของ '+dfmt(r.recv):''}</div></div><span class="pill">${done(r)?'ได้ของแล้ว':(r.inApp?'ส่งมาให้':'ดูรายการ')}</span></div></div>`;
+  const row=r=>`<div class="swipe" data-id="${r.id}"><div class="del" onclick="hideReq('${r.id}')">ลบ</div><div class="row" onclick="${reqSel?`toggleSel('${r.id}')`:`location.href='?t=${r.id}&r=1'`}">${reqSel?`<span class="selc ${reqSel.has(r.id)?'on':''}">${reqSel.has(r.id)?ic('check',14):''}</span>`:''}<div style="flex:1;min-width:0"><div class="n">${esc(r.name)}</div><div class="m">ฝากกับ ${esc(r.shopper||'')}${r.recv?' · รับของ '+dfmt(r.recv):''}</div></div><span class="pill">${done(r)?'ได้ของแล้ว':(r.inApp?'ส่งมาให้':'ดูรายการ')}</span></div></div>`;
   setTimeout(bindSwipes,0);
   return `<div class="home-head"><img src="${ICON}" alt=""><div style="flex:1"><div class="app">ฝากซื้อ</div><div class="muted">กระเป๋าเพื่อนที่ฉันฝากไว้</div></div>${recent.length?`<button class="btn ghost sm" onclick="reqSel=reqSel?null:new Set();renderLanding()">${reqSel?'เสร็จ':'เลือก'}</button>`:''}</div>
    ${reqSel&&reqSel.size?`<button class="btn danger block" style="margin-bottom:10px" onclick="hideSelected()">ลบ ${reqSel.size} รายการ</button>`:''}
-   ${recent.length?`<div class="card" style="padding:0 14px">${recent.map(row).join('')}</div><p class="muted" style="text-align:center;font-size:12px">เลื่อนซ้ายเพื่อลบออกจากรายการ</p>`:emptyState('ยังไม่ได้ฝากซื้อกับใคร','กดลิงค์ที่เพื่อนส่งมา หรือวางลิงค์ด้านล่าง')}
+   ${recent.length?recent.map(row).join('')+`<p class="muted" style="text-align:center;font-size:12px">เลื่อนซ้ายเพื่อลบออกจากรายการ</p>`:emptyState('ยังไม่ได้ฝากซื้อกับใคร','กดลิงค์ที่เพื่อนส่งมา หรือวางลิงค์ด้านล่าง')}
    <div class="linkbar"><div class="inner"><input id="tLink" placeholder="วางลิงค์ที่เพื่อนส่งมา"><button class="btn sm" onclick="openLink()">ไป</button></div></div>`;
 }
 function bindSwipes(){document.querySelectorAll('.swipe').forEach(el=>{let x0=null;el.ontouchstart=e=>{x0=e.touches[0].clientX};el.ontouchmove=e=>{if(x0===null)return;const dx=e.touches[0].clientX-x0;if(dx<-40){el.classList.add('open');document.querySelectorAll('.swipe.open').forEach(o=>{if(o!==el)o.classList.remove('open')})}else if(dx>20)el.classList.remove('open')};el.ontouchend=()=>{x0=null}})}
@@ -686,7 +686,7 @@ function itemRow(i){
       <div class="meta">${esc(i.requester)}${i.shop?' · '+esc(i.shop):''}${i.price?' · '+money(i.price):''}${i.distKm!=null?' · '+i.distKm.toFixed(1)+' กม.':''}</div>
       ${i.price&&S.trip?`<div class="meta">รวมค่าฝากซื้อ ≈ THB ${fmt(goodsThb(i)+feeFor(i))}</div>`:''}
       <div class="steps ${off?'off':''}">${FLOW.map((s,k)=>`<span class="${off?(k===0?'done':''):(k<=stepIdx?'done':'')}"></span>`).join('')}</div>
-      <span class="st ${i.status}">${STATUS[i.status]}</span>
+      <div style="text-align:right"><span class="st ${i.status}">${STATUS[i.status]}</span></div>
     </div></div>`;
 }
 let itemSort='cat';
@@ -724,7 +724,7 @@ function copyLink(l){navigator.clipboard.writeText(l).then(()=>toast('คัด�
 function renderRequester(){
   if(!S.me){shell(`<div class="card"><h2>สวัสดี</h2><p class="muted">บอกชื่อไว้หน่อย ${esc(S.trip.shopper)} จะได้รู้ว่าใครฝาก</p><div class="field" style="margin-top:10px"><input id="meName" placeholder="ชื่อเล่นของคุณ"></div><button class="btn block" onclick="S.me=$('#meName').value.trim();if(!S.me)return toast('ใส่ชื่อก่อนนะ');LS('toast:me',S.me);render()">เริ่มฝากซื้อ</button></div>`);return;}
   const mine=S.items.filter(i=>i.rid&&i.rid===S.rid);
-  const t=S.trip;const closed=t.close&&t.close<todayStr();const rules=`<div class="card" style="padding:10px 14px"><div style="font-weight:500">รายละเอียดฝากซื้อ</div><div class="muted">${t.recv?`รับของ ${dfmt(t.recv)} · `:''}${t.close?`ปิดรับฝาก ${dfmt(t.close)}${closed?' (ปิดแล้ว)':''} · `:''}อัตรา 1 ${cur()} = ${(t.rate||1).toFixed(4)} THB · ${feeText(t)}${t.deposit?` · ของเกิน THB ${fmt(t.deposit)} โอนมัดจำก่อน`:''}${t.note?`<br>${esc(t.note)}`:''}</div></div>`;
+  const t=S.trip;const closed=t.close&&t.close<todayStr();const rules=`<div class="card" style="padding:10px 14px"><div style="font-weight:500">รายละเอียดฝากซื้อ</div><div class="muted">${[t.recv?`รับของ ${dfmt(t.recv)}`:'',t.close?`ปิดรับฝาก ${dfmt(t.close)}${closed?' (ปิดแล้ว)':''}`:''].filter(Boolean).join(' · ')}${(t.recv||t.close)?'<br>':''}อัตรา 1 ${cur()} = ${(t.rate||1).toFixed(4)} THB · ${feeText(t)}${t.deposit?` · ของเกิน THB ${fmt(t.deposit)} โอนมัดจำก่อน`:''}${t.note?`<br>${esc(t.note)}`:''}</div></div>`;
   shell(rules+`
    ${closed?`<div class="card" style="text-align:center;color:var(--ink-2)">ปิดรับฝากแล้ว ติดต่อ ${esc(t.shopper)} โดยตรงถ้ามีของด่วน</div>`:`<button class="btn block" style="margin-bottom:12px" onclick="openItemForm()">+ ฝากซื้อของ</button>`}
    ${mine.length?`<div class="card">${mine.map(itemRow).join('')}</div>`:emptyState('ยังไม่มีรายการ','กดปุ่มด้านบนเพื่อฝากของชิ้นแรก')}
