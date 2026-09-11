@@ -240,7 +240,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='4.2';
+const VERSION='4.4';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -353,7 +353,7 @@ const EN=[
 ["ดูมุมของเพื่อน","See what friends see"],["ดูหน้าแบบผู้ฝาก","See what friends see"],["หน้าแรก","Home"],["ตั้งค่า","Settings"],["แก้ไข","Edit"],["กลับ","Back"],["เสร็จ","Done"],["เลือก","Select"],["ลบออกจากรายการแล้ว","Removed from your list"],["ลบแล้ว","Removed"],["ลบไม่ได้","Couldn't delete"],["ต้องอัปเดต Rules ก่อน","update the rules first"],["ลบ","Remove"],["เพิ่ม","Add"],["ไป","Go"],
 ["ได้ของแล้ว","Delivered"],["ได้ลิงค์จากเพื่อนมา?","Got a link?"],["วางลิงค์","Paste link"],["ส่งแล้ว","Delivered"],["ส่งให้แล้ว","Shared"],["ใส่ตำแหน่งปัจจุบันแล้ว","Pinned your current spot"],["ขอตำแหน่งไม่ได้","Couldn't get your location"],["กำลังเปิดกระเป๋า…","Opening bag…"],
 ["โหมดตัวอย่าง","Demo mode"],["โหมดทดลองในเครื่อง","Local test mode"],["เชื่อมต่อ Firebase","Online"],["ใส่ข้อมูลจำลองแล้ว","Demo data added"],["เร็ว ๆ นี้","coming soon"],
-["กม.","km"],["คน","people"],["วัน","days"],["ฉัน","Me"],["แล้ว",""],["เริ่มกันเลย","Let's go"],["ไทย","ไทย"]
+["กม.","km"],["คน","people"],["วัน","days"],["ฉัน","Me"],["แล้ว",""],["ลบรายการที่จบแล้วทั้งหมด","Delete all finished items"],["ล้างรายการที่จบแล้ว","Clear finished items"],["ลบรายการนี้ถาวร?","Delete this item permanently?"],["ลบรายการนี้ถาวร","Delete permanently"],["ไม่มีรายการที่จบแล้ว","No finished items"],["เริ่มกันเลย","Let's go"],["ไทย","ไทย"]
 ];
 const EN_MAP=EN.filter(x=>x[0]).sort((a,b)=>b[0].length-a[0].length);
 function tr(s){if(LANG!=='en'||typeof s!=='string')return s;let out=s;for(const [th,en] of EN_MAP){if(out.includes(th))out=out.split(th).join(en);}return out;}
@@ -388,6 +388,7 @@ const store={
     return ()=>window.removeEventListener('storage',h);
   },
   async addItem(id,it){ it.createdAt=Date.now(); if(DB&&!DEMO){await DB.collection('trips').doc(id).collection('items').doc(it.id).set(it);} else {const a=LS('toast:items:'+id)||[];a.push(it);LS('toast:items:'+id,a);store._local&&store._local();} },
+  async deleteItem(id,itemId){ if(DB&&!DEMO){await DB.collection('trips').doc(id).collection('items').doc(itemId).delete();} else {const a=(LS('toast:items:'+id)||[]).filter(x=>x.id!==itemId);LS('toast:items:'+id,a);store._local&&store._local();} },
   async updateItem(id,itemId,patch){ if(DB&&!DEMO){await DB.collection('trips').doc(id).collection('items').doc(itemId).update(patch);} else {const a=(LS('toast:items:'+id)||[]).map(x=>x.id===itemId?{...x,...patch}:x);LS('toast:items:'+id,a);store._local&&store._local();} },
 };
 
@@ -414,7 +415,7 @@ function authMsg(e){return AUTH_ERR[e.code]||('ผิดพลาด: '+(e.code|
 function currentUser(){ if(AUTH)return AUTH.currentUser; const u=LS('toast:localUser');return u; }
 async function boot(){
   applyMode();
-  if(!S.tripId&&!DEMO){await showCover();}
+  if(!S.tripId&&!DEMO&&!sessionOpened()){await showCover();}
   if(DEMO){S.user={uid:'demo',email:'demo@toast.app',displayName:LS('toast:demoName')||'Tidatip'};}
   else{
     const last=LS('toast:lastUser');
@@ -445,6 +446,7 @@ async function boot(){
   S.unsub=store.watchItems(S.tripId,items=>{S.items=items;render()});
   render();
 }
+function sessionOpened(){try{const v=sessionStorage.getItem('toast:opened');sessionStorage.setItem('toast:opened','1');return !!v}catch(e){return false}}
 function showCover(){return new Promise(res=>{const d=document.createElement('div');d.className='cover';d.innerHTML=`<div style="text-align:center"><h1>Toast</h1><p>${tr('หิ้วของกลับมาให้ถึงมือ')}</p></div><button class="btn">${tr('เริ่มกันเลย')}</button>`;document.body.appendChild(d);d.querySelector('button').onclick=()=>{d.remove();res()}})}
 async function doAuth(mode){
   if(!DEMO){const ok=await fbReady;if(!ok){toast('โหลด Firebase ไม่ได้ ลองใหม่อีกที');return}}
@@ -779,7 +781,8 @@ function itemsView(){
   return `
    <div class="seg"><button class="${f.view!=='off'?'on':''}" onclick="S.filter.view='all';render()">รายการทั้งหมด</button><button class="${f.view==='off'?'on':''}" onclick="S.filter.view='off';render()">ยกเลิก${nOff?' ('+nOff+')':''}</button></div>
    <div class="seg3"><button class="${itemSort==='cat'?'on':''}" onclick="itemSort='cat';render()">ตามหมวด</button><button class="${itemSort==='status'?'on':''}" onclick="itemSort='status';render()">ตามสถานะ</button><button class="${itemSort==='near'?'on':''}" onclick="itemSort='near';S.pos?render():locateMe()">${ic('pin',14)} ร้านใกล้ฉัน</button></div>
-   ${list.length?body:'<div class="card"><div class="empty">ยังไม่มีของ</div></div>'}`;
+   ${list.length?body:'<div class="card"><div class="empty">ยังไม่มีของ</div></div>'}
+   ${S.items.some(i=>['cancelled','notfound','delivered'].includes(i.status))?`<button class="btn ghost block sm" style="margin-top:4px" onclick="clearDone()">ล้างรายการที่จบแล้ว</button>`:''}`;
 }
 function haversine(a,b){const R=6371,d=x=>x*Math.PI/180;const dl=d(b.lat-a.lat),dg=d(b.lng-a.lng);const h=Math.sin(dl/2)**2+Math.cos(d(a.lat))*Math.cos(d(b.lat))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
 function locateMe(){navigator.geolocation.getCurrentPosition(p=>{S.pos={lat:p.coords.latitude,lng:p.coords.longitude};itemSort='near';render()},()=>toast('ขอตำแหน่งไม่ได้ ลองเปิด Location ให้เบราว์เซอร์'),{enableHighAccuracy:true,timeout:8000})}
@@ -889,9 +892,12 @@ function openItem(id){
    ${isShopper&&!off&&next?`<div style="margin-top:14px">${['requested','searching'].includes(i.status)?`<div class="field"><label>ราคาที่ซื้อจริง (${cur()}) — ใส่หรือไม่ก็ได้</label><input id="uPaid" inputmode="decimal" value="${i.paid||''}" oninput="approx('uPaid','aPaid')"><div class="approx" id="aPaid" style="margin:2px 0 0"></div></div>`:''}<button class="btn block" onclick="setStatus('${i.id}','${next}')">→ ${STATUS[next]}</button></div>`:''}
    ${isShopper&&!off?`<div class="row" style="margin-top:8px"><button class="btn danger" onclick="setStatus('${i.id}','notfound')">หาไม่ได้</button><button class="btn ghost" onclick="setStatus('${i.id}','cancelled')">ยกเลิก</button></div>`:''}
    ${isShopper&&off?`<button class="btn ghost block" style="margin-top:8px" onclick="setStatus('${i.id}','requested')">เปิดรายการใหม่</button>`:''}
+   ${isShopper&&(off||i.status==='delivered')?`<button class="btn danger block" style="margin-top:8px" onclick="delItem('${i.id}')">ลบรายการนี้ถาวร</button>`:''}
    ${!isShopper&&i.status==='requested'?`<button class="btn danger block" style="margin-top:14px" onclick="setStatus('${i.id}','cancelled')">ยกเลิกรายการนี้</button>`:''}
    ${!isShopper&&i.status!=='requested'?`<p class="muted" style="margin-top:12px">${esc(S.trip.shopper)} รับเรื่องแล้ว ถ้าจะแก้ไข ทักไปบอกโดยตรงนะ</p>`:''}`);
 }
+async function delItem(id){const i=S.items.find(x=>x.id===id);if(!confirm(tr('ลบรายการนี้ถาวร?')+' '+(i?i.name:'')))return;try{await store.deleteItem(S.tripId,id);closeSheet();toast('ลบแล้ว')}catch(e){toast('ลบไม่ได้: '+(e.code||e.message))}}
+async function clearDone(){const done=S.items.filter(i=>['cancelled','notfound','delivered'].includes(i.status));if(!done.length)return toast('ไม่มีรายการที่จบแล้ว');if(!confirm(tr('ลบรายการที่จบแล้วทั้งหมด')+' ('+done.length+')?'))return;try{for(const i of done)await store.deleteItem(S.tripId,i.id);toast('ลบแล้ว '+done.length+' รายการ')}catch(e){toast('ลบไม่ได้: '+(e.code||e.message))}}
 async function setStatus(id,s){
   const i=S.items.find(x=>x.id===id);
   const patch={status:s,log:[...(i.log||[]),{s,at:Date.now()}]};
