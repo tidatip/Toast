@@ -1,4 +1,4 @@
-const CACHE='toast-v4.7';
+const CACHE='toast-v4.8';
 const ASSETS=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png','./cover.jpg','./toast-hero.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>Promise.all(ASSETS.map(a=>c.add(a).catch(()=>{})))))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});

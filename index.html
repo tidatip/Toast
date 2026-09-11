@@ -257,7 +257,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='4.7';
+const VERSION='4.8';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -675,7 +675,7 @@ function authMsg(e){return AUTH_ERR[e.code]||('ผิดพลาด: '+(e.code|
 function currentUser(){ if(AUTH)return AUTH.currentUser; const u=LS('toast:localUser');return u; }
 async function boot(){
   applyMode();
-  if(!S.tripId&&!DEMO&&!sessionOpened()){await showCover();}
+  if(!S.tripId&&!DEMO&&!sessionOpened())showCover();
   if(DEMO){S.user={uid:'demo',email:'demo@toast.app',displayName:LS('toast:demoName')||'Tidatip'};}
   else{
     const last=LS('toast:lastUser');
@@ -688,7 +688,7 @@ async function boot(){
       else{S.user=null;LS('toast:lastUser',null);if(!S.tripId){myTripsCache=null;renderLanding();return;}}
     } else { S.user=LS('toast:localUser'); }
   }
-  if(S.user){store.ensureProfile(S.user).then(u=>{S.myUsername=u});const addc=Q.get('add');if(addc){history.replaceState(null,'','./');const f=await store.findByUsername(addc);if(f&&f.uid!==S.user.uid){await store.addFriend(S.user,f);toast('เพิ่ม '+f.name+' เพิ่มเป็นเพื่อนแล้ว');}else if(!f)toast('ไม่พบผู้ใช้นี้');}}
+  if(S.user){store.ensureProfile(S.user).then(u=>{S.myUsername=u});const addc=Q.get('add');if(addc){history.replaceState(null,'','./');store.findByUsername(addc).then(async f=>{if(f&&f.uid!==S.user.uid){await store.addFriend(S.user,f);S.friends=await store.myFriends(S.user.uid);toast('เพิ่ม '+f.name+' เพิ่มเป็นเพื่อนแล้ว');renderLanding()}else if(!f)toast('ไม่พบผู้ใช้นี้')});}}
   if(!S.tripId&&S.user&&Q.get('cleanup')==='1'){await clearDemo();LS('toast:seeded:'+S.user.uid,null);history.replaceState(null,'','./');}
   if(!S.tripId&&REQPREVIEW&&DEMO){myTripsCache=await store.myTrips(S.user.uid);if(LS('toast:demoVer')!==6){await seedDemo(true);}const rr=LS('toast:recent')||[];const r=rr.find(x=>x.name==='London')||rr[0];if(r){S.tripId=r.id;S.role='requester';}}
   if(!S.tripId){if(DEMO||myTripsCache===null)renderLanding();else refreshHome(true);return;}
@@ -703,11 +703,12 @@ async function boot(){
     if(pr){LS('toast:rid:'+S.tripId,pr);if(pn){S.me=decodeURIComponent(pn);LS('toast:me',S.me);}history.replaceState(null,'',`?t=${S.tripId}&r=1`);}
     S.rid=LS('toast:rid:'+S.tripId)||(S.user?'u-'+S.user.uid:null)||uid(8);LS('toast:rid:'+S.tripId,S.rid);
     if(S.user&&!S.me)S.me=S.user.displayName||'';if(S.user)store.saveRequest(S.user.uid,S.trip).catch(()=>{});else{const recent=(LS('toast:recent')||[]).filter(x=>x.id!==S.tripId);recent.unshift({id:S.tripId,name:S.trip.name,shopper:S.trip.shopper});LS('toast:recent',recent.slice(0,12));}}
-  S.unsub=store.watchItems(S.tripId,items=>{S.items=items;render()});
-  render();
+  const cc=(itemCounts||{})[S.tripId];if(cc&&cc.length){S.items=cc;render();}
+  S.unsub=store.watchItems(S.tripId,items=>{S.items=items;if(itemCounts)itemCounts[S.tripId]=items;render()});
+  if(!cc||!cc.length)render();
 }
 function sessionOpened(){try{const v=sessionStorage.getItem('toast:opened');sessionStorage.setItem('toast:opened','1');return !!v}catch(e){return false}}
-function showCover(){return new Promise(res=>{const d=document.createElement('div');d.className='cover';d.innerHTML=`<div style="text-align:center"><h1>Toast</h1><p>${tr('อยากได้อะไรฝากมา เดี๋ยวเอากลับไปให้')}</p></div><button class="btn">${tr('เริ่มกันเลย')}</button>`;document.body.appendChild(d);d.querySelector('button').onclick=()=>{d.remove();res()}})}
+function showCover(){const d=document.createElement('div');d.className='cover';d.innerHTML=`<div style="text-align:center"><h1>Toast</h1><p>${tr('อยากได้อะไรฝากมา เดี๋ยวเอากลับไปให้')}</p></div><button class="btn">${tr('เริ่มกันเลย')}</button>`;document.body.appendChild(d);d.querySelector('button').onclick=()=>d.remove()}
 async function doAuth(mode){
   if(!DEMO){const ok=await fbReady;if(!ok){toast('โหลด Firebase ไม่ได้ ลองใหม่อีกที');return}}
   const uname=$('#aUser').value.trim().toLowerCase(),pw=$('#aPw').value;
@@ -788,7 +789,11 @@ async function refreshHome(background){
     if(DEMO&&(LS('toast:demoVer')!==6)){if(LSOK)Object.keys(localStorage).filter(k=>/^toast:(trip|items|recent|friends|cache)/.test(k)).forEach(k=>localStorage.removeItem(k));await seedDemo(true);}
     const [friends,inv,trips]=await Promise.all([store.myFriends(S.user.uid),store.invitedBags(S.user.uid),store.myTrips(S.user.uid)]);
     const rec=LS('toast:recent')||[];
-    const counts={};await Promise.all(trips.map(async t=>{counts[t.id]=await store.getItems(t.id);}));
+    const counts={};const old=itemCounts||{};const today=todayStr();
+    const need=trips.filter(t=>!old[t.id]||!t.recv||t.recv>=today);
+    trips.forEach(t=>{if(old[t.id])counts[t.id]=old[t.id]});
+    await Promise.all(need.slice(0,8).map(async t=>{try{counts[t.id]=await store.getItems(t.id)}catch(e){counts[t.id]=old[t.id]||[]}}));
+    trips.forEach(t=>{if(!counts[t.id])counts[t.id]=old[t.id]||[]});
     const next={v:2,at:Date.now(),trips,counts,friends,myReq:[...inv.map(t=>({id:t.id,name:t.name,shopper:t.shopper,recv:t.recv,inApp:true})),...rec.filter(r=>!inv.some(t=>t.id===r.id))]};
     const changed=JSON.stringify(next.trips)!==JSON.stringify(myTripsCache)||JSON.stringify(next.friends)!==JSON.stringify(S.friends)||JSON.stringify(next.myReq)!==JSON.stringify(S.myReq)||JSON.stringify(Object.keys(next.counts).map(k=>next.counts[k].length))!==JSON.stringify(Object.keys(itemCounts).map(k=>itemCounts[k].length));
     myTripsCache=next.trips;itemCounts=next.counts;S.friends=next.friends;S.myReq=next.myReq;
