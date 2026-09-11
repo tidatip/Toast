@@ -19,13 +19,11 @@
   --r:18px;--pad:16px;
 }
 :root[data-mode=dark]{--ink:#F4E9D2;--ink-2:#C9B58F;--line:#4A4030;--bg:#1E1A14;--card:rgba(40,34,26,.82);--accent:#E0A54E;--accent-deep:#F2C377;--accent-soft:#3A2F1E;--on-accent:#1E1A14}
-:root[data-mode=dark] body::before{filter:brightness(.28) saturate(.7)}
 :root[data-mode=dark] .field input,:root[data-mode=dark] .field select,:root[data-mode=dark] .field textarea,:root[data-mode=dark] .share,:root[data-mode=dark] .seg,:root[data-mode=dark] .chip{background:#2A241B;color:var(--ink)}
 :root[data-mode=dark] nav.tabs{background:rgba(30,26,20,.92)}
 :root[data-mode=dark] .sheet{background-color:#1E1A14}
 :root[data-mode=dark] .toastmsg{background:#F4E9D2;color:#1E1A14}
 .field input[type=date]{min-width:0;width:100%;-webkit-appearance:none;appearance:none;display:block}
-body.login::before{background-image:url(bg-login.jpg);background-position:center top}
 .hero{text-align:center;padding:44vh 0 4px}
 .hero img{display:none}
 .authcard{min-height:296px;display:flex;flex-direction:column;justify-content:center}
@@ -194,7 +192,6 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 .badges span{min-width:22px;height:22px;padding:0 6px;border-radius:11px;font-size:12px;color:#fff;display:flex;align-items:center;justify-content:center;background:var(--st-requested)}
 
 /* hero (landing) */
-body::before{content:'';position:fixed;inset:0;z-index:-1;background:var(--bg) url(bg-app.jpg) center top/cover no-repeat}
 .hero h1{margin-top:0;font-size:26px}
 .hero p{max-width:32ch;margin:0 auto}
 .landing main{padding-bottom:80px}
@@ -202,7 +199,7 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:var(--bg) u
 
 /* sheet */
 .sheet-bg{position:fixed;inset:0;background:rgba(58,36,21,.45);display:flex;align-items:flex-end;justify-content:center;z-index:50}
-.sheet{background:var(--bg) url(bg-app.jpg) center top/cover no-repeat;width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;padding:16px var(--pad) calc(24px + env(safe-area-inset-bottom))}
+.sheet{background:var(--bg);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;padding:16px var(--pad) calc(24px + env(safe-area-inset-bottom))}
 .sheet .grip{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 12px}
 .sheet h2{margin-bottom:12px}
 .field .photobox,.photobox{display:grid!important;place-items:center;width:100%;aspect-ratio:1/1;height:auto;margin:0;font-size:14px;border:2px dashed var(--line);border-radius:14px;background:var(--card);color:var(--ink-2);cursor:pointer;overflow:hidden;position:relative}
