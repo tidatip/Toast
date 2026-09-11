@@ -245,7 +245,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='4.5';
+const VERSION='4.6';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -255,9 +255,9 @@ const FIREBASE_CONFIG={apiKey:"...",authDomain:"toast-xxxx.firebaseapp.com",proj
 */
 
 /* ---------- 2. constants ---------- */
-const STATUS={requested:'รับฝาก',searching:'กำลังตามหา',found:'เจอแล้ว',packed:'ลงกระเป๋าแล้ว',delivered:'ถึงมือแล้ว',cancelled:'ยกเลิก',notfound:'หาไม่ได้'};
+const STATUS={requested:'จดไว้แล้ว',searching:'กำลังตามหา',found:'เจอแล้ว!',packed:'อยู่ในกระเป๋าแล้ว',delivered:'ถึงมือแล้ว',cancelled:'ยกเลิก',notfound:'หาไม่เจอจริง ๆ'};
 const FLOW=['requested','searching','found','packed','delivered'];
-const CATS_DEFAULT=['ของกิน','เครื่องสำอาง','เสื้อผ้า','ของใช้','ยา/วิตามิน'];
+const CATS_DEFAULT=['ของกิน','เครื่องสำอาง','แฟชั่น','ของใช้','ยา/วิตามิน'];
 const cats=t=>((t||S.trip||{}).cats)||CATS_DEFAULT;
 const ICON='icon-192.png';
 const HERO='toast-hero.png';
@@ -286,7 +286,7 @@ const IC={
 };
 const ic=(n,s=18,extra='')=>`<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ${extra}>${IC[n]}</svg>`;
 const CURS=['JPY','THB','KRW','USD','EUR','GBP','CNY','TWD','SGD','HKD','MYR','VND','AUD'];
-const FALLBACK={substitute:'ซื้อของทดแทนที่ระบุไว้',contact:'ติดต่อฉันก่อน',cancel:'ยกเลิกรายการนี้ไปเลย'};
+const FALLBACK={substitute:'เอาตัวสำรองที่เลือกไว้',contact:'ทักมาก่อนนะ',cancel:'ข้ามไปได้เลย'};
 const ICON_SVG=`<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><path d="M22 20c0-9 20-9 20 0" fill="none" stroke="var(--accent-deep)" stroke-width="4" stroke-linecap="round"/><path d="M16 26c-5 0-8 4-6 9 1 2 1 4 1 6v11c0 4 3 7 7 7h28c4 0 7-3 7-7V41c0-2 0-4 1-6 2-5-1-9-6-9-2-6-8-9-16-9s-14 3-16 9z" fill="var(--accent)"/><path d="M20 34h24v20H20z" fill="#FFF4E8" opacity=".85"/></svg>`;
 
 /* ---------- 3. storage layer: Firestore หรือ local ---------- */
@@ -298,68 +298,305 @@ async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncod
 const Q=new URLSearchParams(location.search);
 const REQPREVIEW=/requester/.test(location.pathname);
 const EN=[
-["ล็อกเรตนี้ทั้งกระเป๋า เริ่มจากเรตวันนี้ แก้ได้ · ค่าฝากซื้อและรายละเอียดตั้งได้ที่ไอคอนดินสอหลังสร้าง","Locked for this bag — starts at today's rate, editable · fee and details can be set later via the pencil icon"],
-["โยนเข้ากลุ่มได้เลย เพื่อนกดแล้วฝากได้ทันที ไม่ต้องสมัคร · ทุกคนกดลิงค์เดียวกันแต่เห็นแค่ของตัวเอง","Drop it in the group chat — friends can add items right away, no sign-up · everyone uses the same link but only sees their own items"],
-["สำหรับเพื่อนที่สลับเครื่องบ่อย ใส่ชื่อแล้วส่งให้คนนั้นโดยตรง","For friends who switch phones — name them and send it directly"],
+["ล็อกเรตนี้ทั้งกระเป๋า เริ่มจากเรตวันนี้ แก้ได้ภายหลัง<br>ค่าฝากซื้อและรายละเอียดตั้งได้ที่ไอคอนดินสอหลังสร้าง","Locked for this bag — starts at today's rate, editable<br>fee and details can be set later via the pencil icon"],
+["ลิงก์เดียวให้ทั้งกลุ่ม ฝากได้ทันที ไม่ต้องเป็นสมาชิก<br>ทุกคนกดลิงค์เดียวกัน แต่เห็นแค่ของตัวเอง","Drop it in the group chat — friends add their picks right away, no sign-up<br>same link for everyone, but each sees only their own"],
+["ลิงค์เฉพาะบุคคล","Send it directly — they’ll only see their own items. More private, less mix-up."],
 ["ยังอยู่ในโหมดทดลองในเครื่อง กระเป๋าเห็นได้เฉพาะเบราว์เซอร์ที่สร้าง — ต้องเชื่อม Firebase ก่อนจึงจะแชร์ลิงค์ให้เพื่อนได้","Still in local test mode — bags are only visible in the browser that created them"],
-["ไม่พบกระเป๋านี้ ลิงค์อาจผิดหรือถูกลบไปแล้ว","Can't find this bag — the link may be wrong or closed"],
+["ไม่พบกระเป๋านี้ ลิงค์อาจผิดหรือถูกลบไปแล้ว","Can't find this bag — the link may be wrong or the bag may have been deleted"],
 ["เพื่อความปลอดภัย ออกจากระบบแล้วเข้าใหม่ก่อนเปลี่ยนรหัส","For safety, log out and back in before changing it"],
-["กด + แล้วใส่ไอดีเพื่อน (ยูเซอร์เนมที่ใช้ล็อกอิน)","Tap + and enter a friend's ID (their login username)"],
+["กด + แล้วใส่ ID เพื่อน (ยูเซอร์เนมที่ใช้ล็อกอิน)","Tap + and enter a friend's ID (their login username)"],
 ["ไอดีเพื่อน (ยูเซอร์เนมที่ใช้ล็อกอิน)","Friend's ID (their login username)"],
 ["กดลิงค์ที่เพื่อนส่งมา หรือวางลิงค์ด้านล่าง","Tap a friend's link, or paste one below"],
-["ส่งลิงค์ให้เพื่อนจากแท็บ \"แชร์ลิงค์\" หรือเพิ่มแทนเพื่อนได้เลย","Share the link, or add something for a friend"],
-["รับเรื่องแล้ว ถ้าจะแก้ไข ทักไปบอกโดยตรงนะ","is on it — message them directly to change anything"],
+["ส่งลิงค์ให้เพื่อน หรือจะใส่ให้เพื่อนเองก็ได้","Share the link, or add something for a friend"],
+["รับไว้แล้วนะ ถ้ามีอะไรเปลี่ยน ทักมาบอกได้เลย","has your list — message them to change anything"],
 ["ถ้าคุณคือผู้รับฝาก ให้เข้าสู่ระบบที่หน้าแรก","If this is your bag, log in from the home screen"],
-["ขอตำแหน่งไม่ได้ ลองเปิด Location ให้เบราว์เซอร์","Couldn't get your location — enable it for the browser"],
+["ยังหาโลเคชันไม่เจอ ลองเปิดสิทธิ์ตำแหน่งในเบราว์เซอร์นะ","Couldn't get your location — allow location access in your browser"],
 ["ชื่อผู้ใช้ 3-20 ตัว ใช้ได้เฉพาะ a-z 0-9 . _ -","Username 3–20 characters, a-z 0-9 . _ - only"],
 ["ชื่อผู้ใช้ใช้ได้เฉพาะ a-z 0-9 . _ -","Username may only use a-z 0-9 . _ -"],
 ["ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง","That username or password isn't right"],
-["ทักฉันได้ที่ (LINE / โทร) — ไม่บังคับ","Reach me at (LINE / phone) — optional"],
-["ของเกินราคานี้ขอมัดจำก่อน (THB)","Ask for a deposit above (THB)"],
-["รายละเอียดฝากซื้อ (ข้อความถึงเพื่อน)","Details for friends (note)"],
+["ติดต่อฉันได้ที่ (LINE / โทร) — ไม่บังคับ","Reach me at (LINE / phone) — optional"],
+["ยอดเกินนี้ ขอวางมัดจำไว้หน่อย (THB)","Ask for a deposit above (THB)"],
+["ข้อความถึงเพื่อน","A note for your friends"],
 ["เช่น ของเหลวไม่รับนะ · ของหนักคิดเพิ่ม","e.g. No liquids · Heavy items cost extra"],
-["ปิดรับฝากแล้ว ติดต่อ","Requests are closed — message"],["โดยตรงถ้ามีของด่วน","directly if it's urgent"],
-["กดปุ่มด้านบนเพื่อฝากของชิ้นแรก","Tap above to add your first item"],
-["ค้นหากระเป๋า ปลายทาง หรือชื่อของ","Search bags, places, or items"],
-["เลื่อนซ้ายเพื่อลบออกจากรายการ","Swipe left to remove"],
-["เปิดใน Safari/Chrome แล้ว","Open in Safari/Chrome and"],["เพิ่มไปยังหน้าจอโฮม","Add to Home Screen"],["เพื่อใช้เป็นแอพ · เพื่อนที่ฝากของไม่ต้องมีบัญชี","to use it like an app · friends don't need an account"],
-["โหมดตัวอย่าง ออกจากระบบไม่ได้","Demo mode — can't log out"],["โหลด Firebase ไม่ได้ ลองใหม่อีกที","Couldn't load Firebase, try again"],
-["ใส่ชื่อผู้ฝากและชื่อสินค้าก่อน","Add the requester and item name first"],["รูปใหญ่เกินไป ลองรูปอื่น","Photo's too big — try another"],
-["รหัสผ่านต้องอย่างน้อย 6 ตัว","Password needs at least 6 characters"],["ลองผิดหลายครั้ง รอสักครู่","Too many tries — take a short break"],
-["ชื่อผู้ใช้นี้มีคนใช้แล้ว","That username is taken"],["ไม่พบชื่อผู้ใช้นี้","Can't find that username"],["กรอกชื่อผู้ใช้และรหัสผ่าน","Enter your username and password"],
-["รายละเอียด / จุดสังเกต","Details"],["สี ขนาด รุ่น ห้ามซื้อแบบไหน","Colour, size, model, or what to avoid"],
-["เช่น Kit Kat รสชาเขียว","e.g. Matcha Kit Kat"],["เช่น Tokyo, เชียงใหม่, สยาม","e.g. Tokyo, Chiang Mai, Siam"],
-["วางลิงค์ Google Maps","Paste a Google Maps link"],["วางลิงค์ที่เพื่อนส่งมา","Paste a friend's link"],
-["ซื้อของทดแทนที่ระบุไว้","Buy my backup pick"],["ยกเลิกรายการนี้ไปเลย","Just skip it"],["ติดต่อฉันก่อน","Message me first"],
-["ถ้าหาไม่เจอ ให้ทำยังไง","If it's not there…"],["ของทดแทนถ้าหาไม่เจอ","Backup pick"],["ถ้าหาไม่เจอ","If not found"],["ของทดแทน","Backup pick"],
-["น้ำหนักโดยประมาณ (กก.)","Approx. weight (kg)"],["ถ้าราคาต่างจากที่เห็น","in case price differs"],["— ใส่หรือไม่ก็ได้","— optional"],
-["ราคาที่ซื้อจริง (","Actual price ("],["ราคาที่เห็น (","Price seen ("],["งบไม่เกิน (","Budget cap ("],["ราคา (","Price ("],
-["ราคาที่เห็น","Price seen"],["งบไม่เกิน","Budget cap"],["ซื้อจริง","Paid"],
-["รวมค่าฝากซื้อ ≈ THB","Incl. fee ≈ THB"],["ไม่คิดค่าฝากซื้อ","No fee"],["ค่าฝากซื้อ THB","Fee THB"],["ค่าฝากซื้อ","Shopper fee"],
-["ของเกิน THB","Deposit needed above THB"],["โอนมัดจำก่อน",""],["% ของราคาของ","% of item price"],["THB/ชิ้น","THB per item"],["THB/กก.","THB per kg"],["ต่อชิ้น","Per item"],["ต่อกก.","per kg"],["ตามน้ำหนัก","By weight"],["ร้อยละ","Percent"],["ไม่คิดเงิน","No fee"],
-["เว้นว่าง = ไม่ต้องมัดจำ","Leave blank for no deposit"],["เว้นว่างได้","Leave blank if none"],
-["สร้างกระเป๋าและรับลิงค์","Open the bag"],["สร้างกระเป๋า","New bag"],["แก้ไขกระเป๋า","Edit bag"],["แชร์กระเป๋า","Share bag"],
-["สกุลเงินที่ใช้ซื้อ","Shopping currency"],["สกุลเงิน","Currency"],["ปิดรับฝาก (ไม่บังคับ)","Requests close (optional)"],["ปิดรับฝาก","Requests close"],["วันรับของ","Pickup date"],["ยังไม่ระบุวันรับของ","Pickup date not set"],["รับของอีก","Pickup in"],["รับของ","Pickup"],
-["ยังไม่ระบุวัน","No date yet"],["ไม่ระบุวัน","No date"],["กำลังจะไป","Coming up"],["ที่ผ่านมา","Delivered"],["กำลังหิ้ว","Shopping now"],["เปิดรับฝาก","Taking requests"],["ยอดซื้อแล้ว","Spent so far"],
-["ไม่มีกระเป๋าในกลุ่มนี้","Nothing here yet"],["กระเป๋าเพื่อนที่ฉันฝากไว้","Bags you've added to"],["ยังไม่ได้ฝากซื้อกับใคร","No wishlists yet"],
-["วันนี้หิ้วอะไรให้เพื่อนดี","What are we shopping for today?"],["สวัสดีตอนเช้า","Good morning"],["สวัสดีตอนบ่าย","Good afternoon"],["สวัสดีตอนเย็น","Good evening"],["หิ้วของกลับมาให้ถึงมือ","Your wishlist, shopped with love"],
-["เพิ่มรายการแทนเพื่อน","Add for a friend"],["ยังไม่มีใครฝากซื้อ","Quiet so far"],["ยังไม่มีรายการ","Your wishlist is empty"],["ยังไม่มีของ","No items yet"],["รายการทั้งหมด","All items"],["ตามสถานะ","By status"],["ตามหมวด","By category"],["ร้านใกล้ฉัน","Nearest shop"],
-["คุณเป็นผู้รับฝาก","Your bag"],["ฝากซื้อกับ","Shopping with"],["คุณกำลังดูในฐานะผู้ฝาก","You're viewing as a requester"],["รายละเอียดฝากซื้อ","Details"],["อัตรา 1","Rate 1"],["เรต 1","Rate 1"],
-["+ ฝากซื้อของ","+ Add to wishlist"],["ฝากซื้อของ","Add to wishlist"],["ฝากในชื่อ","Requesting as"],["เปลี่ยนชื่อ","Change name"],["ฝากซื้อ","Wishlist"],["ฝากโดย","Requested by"],["ฝากกับ","with"],["ฝากแล้ว","Added — fingers crossed!"],
-["บอกชื่อไว้หน่อย","Tell"],["จะได้รู้ว่าใครฝาก","who you are"],["ชื่อเล่นของคุณ","Your nickname"],["เริ่มฝากซื้อ","Let's go"],["ใส่ชื่อก่อนนะ","Add your name first"],["ใส่ชื่อก่อน","Add a name first"],
-["รูปสินค้า","Photo"],["เพิ่มรูปสินค้า","Tap to add a photo"],["เพิ่มรูป","Add photo"],["ชื่อสินค้า","Item"],["จำนวน","Qty"],["ประเภท","Category"],["ตำแหน่งร้าน","Shop location"],["ชื่อร้าน / สาขา","Shop / branch"],["ร้าน","Shop"],["ตรงนี้","Here"],["รายละเอียด","Details"],
-["ของกิน","Food"],["เครื่องสำอาง","Beauty"],["เสื้อผ้า","Fashion"],["ของใช้","Home"],["ยา/วิตามิน","Pharmacy"],["อื่น ๆ","Other"],
-["รับฝาก","Noted"],["กำลังหา","On the hunt"],["กำลังตามหา","On the hunt"],["เจอแล้ว","Got it!"],["รอรับเลย","Ready"],["ถึงมือแล้ว!","Delivered — yay!"],["ถึงมือแล้ว","Delivered"],["ยกเลิกรายการนี้","Cancel this one"],["ยกเลิกแล้ว","Removed"],["ยกเลิก","Cancel"],["หาไม่ได้","Not found"],["เปิดรายการใหม่","Reopen"],["อัปเดตเป็น","Updated to"],["หมายเหตุจากผู้รับฝาก","Note from your shopper"],["เปิดแผนที่","Open map"],
-["ชื่อผู้ฝาก","For whom"],["เพื่อนคนไหน","Friend's name"],["ผู้ฝาก","Friends"],["รายการ","Items"],["กระเป๋า","Bags"],["โปรไฟล์","Profile"],
-["เข้าสู่ระบบแล้ว","You're in!"],["เข้าสู่ระบบก่อน","Log in first"],["เข้าสู่ระบบ","Log in"],["สมัครและเข้าสู่ระบบ","Sign up and start"],["สมัครใหม่","Sign up"],["ชื่อที่เพื่อนจะเห็น","Display name"],["ใส่ชื่อที่เพื่อนจะเห็น","Enter a display name"],["ชื่อผู้ใช้","Username"],["a-z 0-9 เท่านั้น","letters and numbers only"],["รหัสผ่านใหม่","New password"],["ยืนยันรหัสผ่านใหม่","Confirm new password"],["รหัสผ่านไม่ตรงกัน","Passwords don't match"],["รหัสผ่านไม่ถูกต้อง","Wrong password"],["เปลี่ยนรหัสผ่านแล้ว","Password changed"],["เปลี่ยนรหัสผ่าน","Change password"],["รหัสผ่าน","Password"],["อย่างน้อย 6 ตัว","6 characters or more"],["ชื่อเล่น","Nickname"],["ออกจากระบบ","Log out"],["เชื่อมต่อไม่ได้","Couldn't connect"],["ผิดพลาด","Error"],
-["ไอดีของคุณ","Your ID"],["ไอดี @","ID @"],["ให้เพื่อนใช้เพิ่มคุณ","share it so friends can add you"],["ส่งให้เพื่อน","Send my ID"],["เพิ่มเพื่อน","Add a friend"],["เพิ่มฉันใน Toast","Add me on Toast"],["ยังไม่มีเพื่อน","No friends yet"],["เป็นเพื่อนกันอยู่แล้ว","Already friends"],["เป็นเพื่อนแล้ว","added as a friend"],["นั่นไอดีของคุณเอง","That's your own ID"],["ไม่พบไอดีนี้","Can't find that ID"],["ไม่พบผู้ใช้นี้","User not found"],["ลบเพื่อนคนนี้?","Remove this friend?"],["เช่น namwan99","e.g. namwan99"],["เพื่อน","Friends"],["(ไม่มีชื่อ)","(no name)"],
-["ภาษาอังกฤษกำลังตามมา","English is on its way"],["ภาษา","Language"],["พาเลตสี","Colour palette"],["พาเลต","Palette"],["ธีมสี","Colour palette"],["ธีม","Theme"],["อัตโนมัติ","Auto"],["ตามเครื่อง","Auto"],["สว่าง","Light"],["มืด","Dark"],
-["เปลี่ยนชื่อแล้ว","Name updated"],["บันทึกอัตราแล้ว","Rate saved"],["บันทึกแล้ว","Saved"],["บันทึกไม่ได้","Couldn't save"],["บันทึก","Save"],["ใส่อัตราเป็นตัวเลข","Enter the rate as a number"],["ใส่ปลายทางก่อนนะ","Add a destination first"],["กรอกปลายทาง","Add a destination"],["สร้างไม่สำเร็จ","Couldn't create"],["ปลายทาง","Destination"],["กำลังดึง…","Fetching…"],
-["ลิงค์กลุ่ม","Group link"],["ลิงค์ส่วนตัว","Personal link"],["คัดลอกลิงค์แล้ว","Link copied"],["คัดลอก","Copy"],["ลิงค์ไม่ถูกต้อง","That doesn't look like a Toast link"],["ชื่อเพื่อน","Friend's name"],["ใส่ชื่อเพื่อนก่อน","Add a name first"],["แชร์ลิงค์","Share"],["แชร์…","Share…"],["แชร์","Share"],["สร้าง","Create"],["เปลี่ยนรูปพื้นหลัง","Change cover"],
-["ดูมุมของเพื่อน","See what friends see"],["ดูหน้าแบบผู้ฝาก","See what friends see"],["หน้าแรก","Home"],["ตั้งค่า","Settings"],["แก้ไข","Edit"],["กลับ","Back"],["เสร็จ","Done"],["เลือก","Select"],["ลบออกจากรายการแล้ว","Removed from your list"],["ลบแล้ว","Removed"],["ลบไม่ได้","Couldn't delete"],["ต้องอัปเดต Rules ก่อน","update the rules first"],["ลบ","Remove"],["เพิ่ม","Add"],["ไป","Go"],
-["ได้ของแล้ว","Delivered"],["ได้ลิงค์จากเพื่อนมา?","Got a link?"],["วางลิงค์","Paste link"],["ส่งแล้ว","Delivered"],["ส่งให้แล้ว","Shared"],["ใส่ตำแหน่งปัจจุบันแล้ว","Pinned your current spot"],["ขอตำแหน่งไม่ได้","Couldn't get your location"],["กำลังเปิดกระเป๋า…","Opening bag…"],
-["โหมดตัวอย่าง","Demo mode"],["โหมดทดลองในเครื่อง","Local test mode"],["เชื่อมต่อ Firebase","Online"],["ใส่ข้อมูลจำลองแล้ว","Demo data added"],["เร็ว ๆ นี้","coming soon"],
-["กม.","km"],["คน","people"],["วัน","days"],["ฉัน","Me"],["แล้ว",""],["หมวดนี้คิดค่าฝากซื้อตามน้ำหนัก ใส่น้ำหนักด้วยนะ","This category charges by weight — add the weight"],["คิดเหมือนกันหมด","Same for all"],["แยกตามหมวด","By category"],["+ เพิ่มหมวดสินค้า","+ Add a category"],["เพิ่มหมวดสินค้า","Add a category"],["ชื่อหมวด","Category name"],["เช่น รองเท้า","e.g. Shoes"],["มีหมวดนี้แล้ว","That category already exists"],["ปรับค่าฝากซื้อชิ้นนี้","Set fee for this item"],["ค่าฝากซื้อชิ้นนี้","Fee for this item"],["ปกติคิด","Normally"],["ตั้งเฉพาะชิ้นนี้ได้","set a different fee just for this one"],["เหตุผล (ให้เพื่อนเห็น)","Reason (visible to your friend)"],["เช่น ต้องตามหาหลายสาขา","e.g. Need to check several branches"],["ใช้ค่าปกติของหมวด","Use the category default"],["กลับไปใช้ค่าปกติแล้ว","Back to the default"],["ลบรายการที่จบแล้วทั้งหมด","Delete all finished items"],["ล้างรายการที่จบแล้ว","Clear finished items"],["ลบรายการนี้ถาวร?","Delete this item permanently?"],["ลบรายการนี้ถาวร","Delete permanently"],["ไม่มีรายการที่จบแล้ว","No finished items"],["เริ่มกันเลย","Let's go"],["ไทย","ไทย"]
+["ปิดกระเป๋าแล้ว ทัก","The bag's closed — message"],
+["ตรงได้เลยถ้ามีอะไรด่วน","directly if something's urgent"],
+["ชิ้นแรก เริ่มตรงนี้","Tap above and start with one thing"],
+["ค้นหากระเป๋า ที่หมาย หรือของที่ฝาก","Search bags, destinations, or items"],
+["เลื่อนซ้ายเพื่อลบรายการ","Swipe left to remove"],
+["เปิดใน Safari/Chrome แล้ว","Open in Safari/Chrome"],
+["เพิ่มไปยังหน้าจอโฮม","Add to Home Screen"],
+["เพื่อใช้เป็นแอพ · ไม่จำเป็นต้องมีบัญชี","to use it like an app · friends don't need an account"],
+["โหมดตัวอย่าง ออกจากระบบไม่ได้","Demo mode — can't log out"],
+["โหลด Firebase ไม่ได้ ลองใหม่อีกที","Couldn't load Firebase, try again"],
+["ใส่ชื่อและของที่อยากได้เลย","Add the requester and item name first"],
+["รูปใหญ่ไปนิด ลองเลือกรูปอื่นนะ","Photo is too large — try another one"],
+["รหัสผ่านอย่างน้อย 6 ตัว","Password must be at least 6 characters"],
+["ลองผิดหลายครั้ง รอสักครู่","Too many tries — take a short break"],
+["ชื่อผู้ใช้นี้มีคนใช้แล้ว","That username is taken"],
+["ไม่พบชื่อผู้ใช้นี้","Can't find that username"],
+["กรอกชื่อผู้ใช้และรหัสผ่าน","Enter your username and password"],
+["รายละเอียดเพิ่มเติม","Details / notes"],
+["สี ไซซ์ รุ่น หรือรายละเอียดที่อยากกำชับ","Colour, size, model, or what to avoid"],
+["เช่น Kit Kat รสชาเขียว","e.g. Matcha Kit Kat"],
+["เช่น Tokyo, เชียงใหม่, สยาม","e.g. Tokyo, Chiang Mai, Siam"],
+["วางลิงค์ Google Maps","Paste a Google Maps link"],
+["วางลิงค์ที่เพื่อนส่งมา","Paste a friend's link"],
+["เอาตัวสำรองที่เลือกไว้","Grab my backup pick"],
+["ข้ามไปได้เลย","Just skip it"],
+["ทักมาก่อนนะ","Message me first"],
+["ถ้าหาไม่เจอ เอายังไงดี","If it's not there…"],
+["ของสำรอง","Backup pick"],
+["ถ้าหาไม่เจอ","If not found"],
+["ของทดแทน","Backup pick"],
+["น้ำหนักโดยประมาณ (กก.)","Approx. weight (kg)"],
+["ถ้าราคาต่างจากที่เห็น","if the price differs"],
+["— ใส่หรือไม่ก็ได้","— optional"],
+["ราคาที่ซื้อจริง (","Actual price ("],
+["ราคาที่เห็น (","Price seen ("],
+["งบไม่เกิน (","Budget cap ("],
+["ราคา (","Price ("],
+["ราคาที่เห็น","Price seen"],
+["งบไม่เกิน","Budget cap"],
+["จ่ายจริง","Paid"],
+["รวมค่าฝากซื้อ ≈ THB","Total incl. fee ≈ THB"],
+["ไม่คิดค่าฝากซื้อ","On the house"],
+["ค่าฝากซื้อ THB","Fee THB"],
+["ค่าฝากซื้อ","Shopper fee"],
+["มัดจำเมื่อเกิน THB","Deposit above THB"],
+["โอนมัดจำก่อน","Pay deposit first"],
+["% ของราคาสินค้า","% of item price"],
+["THB/ชิ้น","THB per item"],
+["THB/กก.","THB per kg"],
+["ต่อชิ้น","Per item"],
+["ต่อกก.","Per kg"],
+["ตามน้ำหนัก","By weight"],
+["ร้อยละ","Percent"],
+["ไม่คิดเงิน","On the house"],
+["เว้นว่าง = ไม่ต้องมัดจำ","Leave blank for no deposit"],
+["เว้นว่างได้","Leave blank if none"],
+["เปิดกระเป๋า","Open the bag"],
+["กระเป๋าใหม่","New bag"],
+["แก้ไขกระเป๋า","Edit bag"],
+["แชร์กระเป๋า","Share bag"],
+["สกุลเงินที่ใช้","Shopping currency"],
+["สกุลเงิน","Currency"],
+["ปิดรับฝาก (ไม่บังคับ)","Requests close (optional)"],
+["ปิดรับฝาก","Requests close"],
+["วันรับของ","Pickup date"],
+["ยังไม่ได้นัดรับ","Pickup date not set"],
+["รับของในอีก","Pickup in"],
+["รับของ","Pickup"],
+["ยังไม่ระบุวัน","No date yet"],
+["ไม่ระบุวัน","No date"],
+["เร็ว ๆ นี้","Coming up"],
+["ที่ผ่านมา","Been there"],
+["กำลังช็อป","Out shopping"],
+["ฝากมาอีกได้เลย","Room in the bag"],
+["ยอดซื้อแล้ว","Spent so far"],
+["ในนี้ยังว่าง","Nothing here yet"],
+["กระเป๋าเพื่อนที่ฉันฝากไว้","Bags you've added to"],
+["ยังไม่ส่งรายการช็อปมาเลย","You haven't sent a list yet"],
+["กระเป๋ายังมีที่ว่างให้คุณนะ","I've got room for yours"],
+["สวัสดีตอนเช้า","Good morning"],
+["สวัสดีตอนบ่าย","Good afternoon"],
+["สวัสดีตอนเย็น","Good evening"],
+["อยากได้อะไรฝากมา เดี๋ยวเอากลับไปให้","Send me your list, I'll bring it back"],
+["ใส่ของให้เพื่อน","Add for a friend"],
+["กระเป๋ายังว่างอยู่เลย","The bag's still empty"],
+["ลิสต์ยังว่างอยู่","Your list is empty"],
+["ยังไม่มีของในกระเป๋า","Nothing in the bag yet"],
+["รายการทั้งหมด","All items"],
+["ตามสถานะ","By status"],
+["ตามหมวด","By category"],
+["ร้านใกล้ฉัน","Nearest shop"],
+["คุณเป็นผู้รับฝาก","Your bag"],
+["ฝากซื้อกับ","Shopping with"],
+["ตอนนี้คุณดูแบบผู้ฝาก","You're viewing as a requester"],
+["รายละเอียดฝากซื้อ","Details"],
+["อัตรา 1","Rate 1"],
+["เรต 1","Rate 1"],
+["+ ฝากของเข้ากระเป๋า","+ Add to the bag"],
+["ฝากซื้อของ","Add to wishlist"],
+["ฝากในชื่อ","Requesting as"],
+["เปลี่ยนชื่อ","Change name"],
+["รายการที่ชอบ","Wishlist"],
+["ฝากโดย","Requested by"],
+["ฝากกับ","with"],
+["ใส่กระเป๋าแล้ว!","In the bag!"],
+["บอกชื่อหน่อยนะ","Tell"],
+["จะได้รู้ว่ารายการฝากซื้อนี้ของใคร","whose list this is"],
+["ชื่อเล่นของคุณ","Your nickname"],
+["ไปช็อปกัน","Let's shop"],
+["ใส่ชื่อก่อนนะ","Add your name first"],
+["ใส่ชื่อก่อน","Add a name first"],
+["รูปสินค้า","Photo"],
+["แตะใส่รูปของที่อยากได้","Tap to add a photo"],
+["เพิ่มรูป","Add photo"],
+["ชื่อสินค้า","Item"],
+["จำนวน","Qty"],
+["ประเภท","Category"],
+["ตำแหน่งร้าน","Shop location"],
+["ชื่อร้าน / สาขา","Shop / branch"],
+["ร้านค้า","Shop"],
+["ตรงนี้","Here"],
+["รายละเอียด","Details"],
+["ของกิน","Food"],
+["เครื่องสำอาง","Beauty"],
+["แฟชั่น","Fashion"],
+["ของใช้","Home"],
+["ยา/วิตามิน","Pharmacy"],
+["อื่น ๆ","Other"],
+["จดไว้แล้ว","On my list"],
+["กำลังตามหา","On the hunt"],
+["เจอแล้ว!","Found it!"],
+["อยู่ในกระเป๋าแล้ว","In the bag"],
+["ส่งถึงมือแล้ว!","Delivered!"],
+["ถึงมือแล้ว","Delivered"],
+["ยกเลิกรายการนี้","Cancel this one"],
+["ยกเลิกแล้ว","Removed"],
+["ยกเลิก","Cancel"],
+["หาไม่เจอจริง ๆ","Couldn't find it"],
+["เอากลับมาใหม่","Put it back"],
+["อัปเดตเป็น","Updated to"],
+["ข้อความจากคนช็อปให้","Note from your shopper"],
+["เปิดแผนที่","Open map"],
+["ชื่อผู้ฝาก","For whom"],
+["เพื่อนคนไหน","Friend's name"],
+["เพื่อน","Friends"],
+["รายการ","Items"],
+["กระเป๋า","Bags"],
+["โปรไฟล์","Profile"],
+["เข้าสู่ระบบแล้ว","You're in!"],
+["เข้าสู่ระบบก่อน","Log in first"],
+["เข้าสู่ระบบ","Log in"],
+["สมัครและเข้าสู่ระบบ","Sign up and start"],
+["สมัครใหม่","Sign up"],
+["ชื่อที่เพื่อนจะเห็น","Display name"],
+["ใส่ชื่อที่เพื่อนจะเห็น","Enter a display name"],
+["ชื่อผู้ใช้","Username"],
+["a-z 0-9 . _ - เท่านั้น","a-z 0-9 . _ - only"],
+["รหัสผ่านใหม่","New password"],
+["ยืนยันรหัสผ่านใหม่","Confirm new password"],
+["รหัสผ่านไม่ตรงกัน","Passwords don't match"],
+["รหัสผ่านไม่ถูกต้อง","Wrong password"],
+["เปลี่ยนรหัสผ่านแล้ว","Password changed"],
+["เปลี่ยนรหัสผ่าน","Change password"],
+["รหัสผ่าน","Password"],
+["อย่างน้อย 6 ตัว","6 characters or more"],
+["ชื่อเล่น","Nickname"],
+["ออกจากระบบ","Log out"],
+["เชื่อมต่อไม่ได้","Couldn't connect"],
+["ผิดพลาด","Error"],
+["ไอดีของคุณ","Your ID"],
+["ไอดี @","ID @"],
+["ส่งให้เพื่อนไว้เพิ่มคุณ","Share it so friends can add you"],
+["ส่งให้เพื่อน","Send my ID"],
+["เพิ่มเพื่อน","Add a friend"],
+["มาเป็นเพื่อนกันใน Toast","Add me on Toast"],
+["ยังไม่มีเพื่อนในแอพ","No friends here yet"],
+["เป็นเพื่อนกันอยู่แล้ว","Already friends"],
+["เพิ่มเป็นเพื่อนแล้ว","Friend added"],
+["นั่นไอดีของคุณเอง","That's your own ID"],
+["ไม่พบไอดีนี้","Can't find that ID"],
+["ไม่พบผู้ใช้นี้","User not found"],
+["ลบเพื่อนคนนี้?","Remove this friend?"],
+["เช่น namwan99","e.g. namwan99"],
+["(ไม่มีชื่อ)","(no name)"],
+["ภาษาอังกฤษกำลังตามมา","English is on its way"],
+["ภาษา","Language"],
+["พาเลตสี","Colour palette"],
+["พาเลต","Palette"],
+["ธีมสี","Colour palette"],
+["ธีม","Theme"],
+["อัตโนมัติ","Auto"],
+["ตามเครื่อง","System"],
+["สว่าง","Light"],
+["มืด","Dark"],
+["เปลี่ยนชื่อแล้ว","Name updated"],
+["บันทึกอัตราแล้ว","Rate saved"],
+["บันทึกแล้ว","Saved"],
+["บันทึกไม่ได้","Couldn't save"],
+["บันทึก","Save"],
+["ใส่อัตราเป็นตัวเลข","Enter the rate as a number"],
+["ใส่ปลายทางก่อนนะ","Add a destination first"],
+["กรอกปลายทาง","Add a destination"],
+["สร้างไม่สำเร็จ","Couldn't create"],
+["ปลายทาง","Destination"],
+["กำลังดึง…","Fetching…"],
+["ลิงค์กลุ่ม","Group link"],
+["ลิงค์ส่วนตัว","Personal link"],
+["คัดลอกลิงค์แล้ว ส่งได้เลย","Link copied — go share it"],
+["คัดลอก","Copy"],
+["ลิงค์ไม่ถูกต้อง","That doesn't look like a Toast link"],
+["ชื่อเพื่อน","Friend's name"],
+["ใส่ชื่อเพื่อนก่อน","Add a name first"],
+["แชร์ลิงค์","Share"],
+["แชร์…","Share…"],
+["แชร์","Share"],
+["สร้าง","Create"],
+["เปลี่ยนรูปพื้นหลัง","Change cover"],
+["ดูมุมของเพื่อน","See what friends see"],
+["ดูหน้าแบบผู้ฝาก","Preview requester view"],
+["หน้าแรก","Home"],
+["ตั้งค่า","Settings"],
+["แก้ไข","Edit"],
+["กลับ","Back"],
+["เสร็จ","Done"],
+["เลือก","Select"],
+["ลบออกจากรายการแล้ว","Removed from your list"],
+["ลบแล้ว","Removed"],
+["ลบไม่ได้","Couldn't delete"],
+["ต้องอัปเดต Rules ก่อน","Update the rules first"],
+["ลบ","Remove"],
+["เพิ่ม","Add"],
+["ไป","Go"],
+["ได้ของแล้ว","Delivered"],
+["ได้ลิงค์จากเพื่อนมา?","Got a link?"],
+["วางลิงค์","Paste link"],
+["ส่งแล้ว","Sent"],
+["ส่งให้แล้ว","Sent"],
+["ใส่ตำแหน่งปัจจุบันแล้ว","Pinned your current spot"],
+["ขอตำแหน่งไม่ได้","Couldn't get your location"],
+["กำลังเปิดกระเป๋า…","Opening the bag…"],
+["โหมดตัวอย่าง","Demo mode"],
+["โหมดทดลองในเครื่อง","Local test mode"],
+["ออนไลน์","Online"],
+["ใส่ข้อมูลจำลองแล้ว","Demo data added"],
+["กม.","km"],
+["คน","people"],
+["วัน","days"],
+["ฉัน","Me"],
+["แล้ว",""],
+["หมวดนี้คิดค่าฝากซื้อตามน้ำหนัก ใส่น้ำหนักด้วยนะ","This category charges by weight — add the weight"],
+["คิดเหมือนกันหมด","Same for all"],
+["แยกตามหมวด","By category"],
+["+ เพิ่มหมวดสินค้า","+ Add a category"],
+["เพิ่มหมวดสินค้า","Add a category"],
+["ชื่อหมวด","Category name"],
+["เช่น รองเท้า","e.g. Shoes"],
+["มีหมวดนี้แล้ว","That category already exists"],
+["ปรับค่าฝากซื้อชิ้นนี้","Set fee for this item"],
+["ค่าฝากซื้อชิ้นนี้","Fee for this item"],
+["ปกติคิด","Normally"],
+["ตั้งเฉพาะชิ้นนี้ได้","Set a different fee just for this one"],
+["เหตุผล (ให้เพื่อนเห็น)","Reason (visible to your friend)"],
+["เช่น ต้องตามหาหลายสาขา","e.g. Need to check several branches"],
+["ใช้ค่าปกติของหมวด","Use the category default"],
+["กลับไปใช้ค่าปกติแล้ว","Back to the default"],
+["ลบรายการที่จบแล้วทั้งหมด","Delete all finished items"],
+["ล้างรายการที่จบแล้ว","Clear finished items"],
+["ลบรายการนี้ถาวร?","Delete this item permanently?"],
+["ลบรายการนี้ถาวร","Delete permanently"],
+["ไม่มีรายการที่จบแล้ว","No finished items"],
+["ไทย","ไทย"],
+["สวัสดี!","Hey there!"],
+["<label>รูป</label>","<label>Photo</label>"],
+["(ปิดแล้ว)","(closed)"],
+["เช่น 50","e.g. 50"],
+["เช่น 300","e.g. 300"],
+["เช่น 1.5","e.g. 1.5"],
+["เช่น LINE: namwan99","e.g. LINE: namwan99"],
+["ค่าฝากซื้อ 5% นะ โอนตอนของถึงมือ","5% shopper fee — pay when it arrives"]
 ];
 const EN_MAP=EN.filter(x=>x[0]).sort((a,b)=>b[0].length-a[0].length);
 function tr(s){if(LANG!=='en'||typeof s!=='string')return s;let out=s;for(const [th,en] of EN_MAP){if(out.includes(th))out=out.split(th).join(en);}return out;}
@@ -416,7 +653,7 @@ const initials=n=>(n||'?').trim().slice(0,1).toUpperCase();
 function toast(msg){const d=document.createElement('div');d.className='toastmsg';d.textContent=tr(msg);$('#toasts').append(d);setTimeout(()=>d.remove(),2200)}
 
 /* ---------- 5. boot ---------- */
-const AUTH_ERR={'auth/invalid-email':'ชื่อผู้ใช้ใช้ได้เฉพาะ a-z 0-9 . _ -','auth/user-not-found':'ไม่พบชื่อผู้ใช้นี้','auth/wrong-password':'รหัสผ่านไม่ถูกต้อง','auth/invalid-credential':'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง','auth/email-already-in-use':'ชื่อผู้ใช้นี้มีคนใช้แล้ว','auth/weak-password':'รหัสผ่านต้องอย่างน้อย 6 ตัว','auth/too-many-requests':'ลองผิดหลายครั้ง รอสักครู่','auth/network-request-failed':'เชื่อมต่อไม่ได้'};
+const AUTH_ERR={'auth/invalid-email':'ชื่อผู้ใช้ใช้ได้เฉพาะ a-z 0-9 . _ -','auth/user-not-found':'ไม่พบชื่อผู้ใช้นี้','auth/wrong-password':'รหัสผ่านไม่ถูกต้อง','auth/invalid-credential':'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง','auth/email-already-in-use':'ชื่อผู้ใช้นี้มีคนใช้แล้ว','auth/weak-password':'รหัสผ่านอย่างน้อย 6 ตัว','auth/too-many-requests':'ลองผิดหลายครั้ง รอสักครู่','auth/network-request-failed':'เชื่อมต่อไม่ได้'};
 function authMsg(e){return AUTH_ERR[e.code]||('ผิดพลาด: '+(e.code||e.message))}
 function currentUser(){ if(AUTH)return AUTH.currentUser; const u=LS('toast:localUser');return u; }
 async function boot(){
@@ -434,7 +671,7 @@ async function boot(){
       else{S.user=null;LS('toast:lastUser',null);if(!S.tripId){myTripsCache=null;renderLanding();return;}}
     } else { S.user=LS('toast:localUser'); }
   }
-  if(S.user){store.ensureProfile(S.user).then(u=>{S.myUsername=u});const addc=Q.get('add');if(addc){history.replaceState(null,'','./');const f=await store.findByUsername(addc);if(f&&f.uid!==S.user.uid){await store.addFriend(S.user,f);toast('เพิ่ม '+f.name+' เป็นเพื่อนแล้ว');}else if(!f)toast('ไม่พบผู้ใช้นี้');}}
+  if(S.user){store.ensureProfile(S.user).then(u=>{S.myUsername=u});const addc=Q.get('add');if(addc){history.replaceState(null,'','./');const f=await store.findByUsername(addc);if(f&&f.uid!==S.user.uid){await store.addFriend(S.user,f);toast('เพิ่มเป็นเพื่อนแล้ว · '+f.name);}else if(!f)toast('ไม่พบผู้ใช้นี้');}}
   if(!S.tripId&&S.user&&Q.get('cleanup')==='1'){await clearDemo();LS('toast:seeded:'+S.user.uid,null);history.replaceState(null,'','./');}
   if(!S.tripId&&REQPREVIEW&&DEMO){myTripsCache=await store.myTrips(S.user.uid);if(LS('toast:demoVer')!==6){await seedDemo(true);}const rr=LS('toast:recent')||[];const r=rr.find(x=>x.name==='London')||rr[0];if(r){S.tripId=r.id;S.role='requester';}}
   if(!S.tripId){if(DEMO||myTripsCache===null)renderLanding();else refreshHome(true);return;}
@@ -453,7 +690,7 @@ async function boot(){
   render();
 }
 function sessionOpened(){try{const v=sessionStorage.getItem('toast:opened');sessionStorage.setItem('toast:opened','1');return !!v}catch(e){return false}}
-function showCover(){return new Promise(res=>{const d=document.createElement('div');d.className='cover';d.innerHTML=`<div style="text-align:center"><h1>Toast</h1><p>${tr('หิ้วของกลับมาให้ถึงมือ')}</p></div><button class="btn">${tr('เริ่มกันเลย')}</button>`;document.body.appendChild(d);d.querySelector('button').onclick=()=>{d.remove();res()}})}
+function showCover(){return new Promise(res=>{const d=document.createElement('div');d.className='cover';d.innerHTML=`<div style="text-align:center"><h1>Toast</h1><p>${tr('อยากได้อะไรฝากมา เดี๋ยวเอากลับไปให้')}</p></div><button class="btn">${tr('ไปช็อปกัน')}</button>`;document.body.appendChild(d);d.querySelector('button').onclick=()=>{d.remove();res()}})}
 async function doAuth(mode){
   if(!DEMO){const ok=await fbReady;if(!ok){toast('โหลด Firebase ไม่ได้ ลองใหม่อีกที');return}}
   const uname=$('#aUser').value.trim().toLowerCase(),pw=$('#aPw').value;
@@ -473,7 +710,7 @@ function authCard(){
   return `<div class="card authcard">
     <div class="seg"><button class="${authMode==='login'?'on':''}" onclick="authMode='login';renderLanding()">เข้าสู่ระบบ</button><button class="${authMode==='register'?'on':''}" onclick="authMode='register';renderLanding()">สมัครใหม่</button></div>
     ${authMode==='register'?`<div class="field"><label>ชื่อที่เพื่อนจะเห็น</label><input id="aName" placeholder="ชื่อเล่น"></div>`:''}
-    <div class="field"><label>ชื่อผู้ใช้</label><input id="aUser" autocapitalize="none" autocomplete="username" placeholder="a-z 0-9 เท่านั้น"></div>
+    <div class="field"><label>ชื่อผู้ใช้</label><input id="aUser" autocapitalize="none" autocomplete="username" placeholder="a-z 0-9 . _ - เท่านั้น"></div>
     <div class="field"><label>รหัสผ่าน</label><input id="aPw" type="password" autocomplete="${authMode==='register'?'new-password':'current-password'}" placeholder="${authMode==='register'?'อย่างน้อย 6 ตัว':''}"></div>
     <button class="btn block" onclick="doAuth('${authMode}')">${authMode==='register'?'สมัครและเข้าสู่ระบบ':'เข้าสู่ระบบ'}</button>
   </div>`;
@@ -502,14 +739,14 @@ function homeTabs(){
   const t=(id,label,svg)=>`<button class="${(homeTab===id||(id==='profile'&&homeTab==='friends'))?'on':''}" onclick="homeTab='${id}';LS('toast:homeTab','${id}');renderLanding()">${svg}<span>${label}</span></button>`;
   return `<nav class="tabs"><div class="inner">
    ${t('bags','กระเป๋า','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>')}
-   ${t('request','ฝากซื้อ','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16l-2 12H6z"/><path d="M9 11v-4a3 3 0 0 1 6 0v4"/><path d="M9 15h6"/></svg>')}
+   ${t('request','รายการที่ชอบ','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16l-2 12H6z"/><path d="M9 11v-4a3 3 0 0 1 6 0v4"/><path d="M9 15h6"/></svg>')}
    ${t('profile','โปรไฟล์','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>')}
   </div></nav>`;
 }
 async function renderLanding(err){
   document.body.classList.add('landing');document.body.classList.remove('login');
   const linkCard=`<div class="card"><h3>ได้ลิงค์จากเพื่อนมา?</h3><div class="row" style="margin-top:8px"><input id="tLink" placeholder="วางลิงค์" style="padding:7px 12px;border:1.5px solid var(--line);border-radius:12px;height:38px;background:var(--card)"><button class="btn ghost sm" style="flex:0" onclick="openLink()">ไป</button></div></div>`;
-  if(!S.user){ document.body.classList.add('login'); shell(`<div class="hero"><img src="${HERO}" alt=""><h1>Toast</h1><p class="muted">หิ้วของกลับมาให้ถึงมือ</p></div>${err?`<div class="card" style="border-color:#FCA5A5">${esc(err)}</div>`:''}`+authCard()); return; }
+  if(!S.user){ document.body.classList.add('login'); shell(`<div class="hero"><img src="${HERO}" alt=""><h1>Toast</h1><p class="muted">อยากได้อะไรฝากมา เดี๋ยวเอากลับไปให้</p></div>${err?`<div class="card" style="border-color:#FCA5A5">${esc(err)}</div>`:''}`+authCard()); return; }
   const ck='toast:cache:'+S.user.uid;
   if(myTripsCache===null){
     if(!DEMO&&S.user&&!LS('toast:cleaned4')){LS('toast:cleaned4',1);try{const all=await store.allMine(S.user.uid);for(const t of all){if(t.demo)await store.deleteTrip(t.id);}const rec=(LS('toast:recent')||[]).filter(r=>!all.some(t=>t.id===r.id));LS('toast:recent',rec);if(DB){try{const s=await DB.collection('users').doc(S.user.uid).collection('requests').get();for(const d of s.docs)await d.ref.delete();}catch(e){}}}catch(e){}}
@@ -556,19 +793,19 @@ function bagsView(err,linkCard){
     return `<div class="bigcard ${cover?'hasphoto':''}" style="${cover?`background-image:url(${cover})`:''}" onclick="location.href='?t=${t.id}'">
       <button type="button" class="cam" onclick="event.stopPropagation();document.getElementById('cov-${t.id}').click()" aria-label="เปลี่ยนรูปพื้นหลัง">${ic('camera',18)}</button><input id="cov-${t.id}" class="vh" type="file" accept="image/*" onclick="event.stopPropagation()" onchange="event.stopPropagation();pickCover(this,'${t.id}')">
       <div class="name">${esc(t.name)}</div>
-      <div class="sub">${t.recv?'รับของ '+dfmt(t.recv):'ยังไม่ระบุวันรับของ'}${t.close?' · ปิดรับฝาก '+dfmt(t.close):''} · ${esc(t.currency||'THB')}</div>
-      <div class="icons"><span>${ic('users',15)} ${ppl} คน</span><span>${ic('bag',15)} ${its.length} รายการ</span><span>${ic('check',15)} ${found} เจอแล้ว</span></div>
-      <div class="foot"><span>ยอดซื้อแล้ว ${t.currency||'THB'} ${fmt(spent)}</span><span class="pill">${t.close&&t.close<=today?'กำลังหิ้ว':'เปิดรับฝาก'}</span></div></div>`};
-  const small=t=>{const its=itemCounts[t.id]||[];let pill='';if(t.recv&&t.recv>=today)pill=`รับของอีก ${daysTo(t.recv)} วัน`;else if(t.recv&&t.recv<today)pill='ส่งแล้ว';else pill='ไม่ระบุวัน';
+      <div class="sub">${t.recv?'รับของ '+dfmt(t.recv):'ยังไม่ได้นัดรับ'}${t.close?' · ปิดรับฝาก '+dfmt(t.close):''} · ${esc(t.currency||'THB')}</div>
+      <div class="icons"><span>${ic('users',15)} ${ppl} คน</span><span>${ic('bag',15)} ${its.length} รายการ</span><span>${ic('check',15)} ${found} เจอแล้ว!</span></div>
+      <div class="foot"><span>ยอดซื้อแล้ว ${t.currency||'THB'} ${fmt(spent)}</span><span class="pill">${t.close&&t.close<=today?'กำลังช็อป':'ฝากมาอีกได้เลย'}</span></div></div>`};
+  const small=t=>{const its=itemCounts[t.id]||[];let pill='';if(t.recv&&t.recv>=today)pill=`รับของในอีก ${daysTo(t.recv)} วัน`;else if(t.recv&&t.recv<today)pill='ส่งแล้ว';else pill='ไม่ระบุวัน';
     return `<div class="smallcard" onclick="location.href='?t=${t.id}'"><div><div class="n">${esc(t.name)}</div><div class="m">${t.recv?'รับของ '+dfmt(t.recv)+' · ':''}${its.length} รายการ · ${esc(t.currency||'THB')}</div></div><span class="pill">${pill}</span></div>`};
   const lists={future,past,undated};const cur=lists[bagFilter]||[];
-  return `<div class="home-head"><img src="${ICON}" alt=""><div style="flex:1"><div class="app">Toast</div><div class="muted">${greet()} ${esc(S.user.displayName||'')}<br>วันนี้หิ้วอะไรให้เพื่อนดี</div></div><button class="btn sm" style="width:44px;padding:0;font-size:24px;line-height:1" onclick="openCreate()" aria-label="สร้างกระเป๋า">+</button></div>
+  return `<div class="home-head"><img src="${ICON}" alt=""><div style="flex:1"><div class="app">Toast</div><div class="muted">${greet()} ${esc(S.user.displayName||'')}<br>กระเป๋ายังมีที่ว่างให้คุณนะ</div></div><button class="btn sm" style="width:44px;padding:0;font-size:24px;line-height:1" onclick="openCreate()" aria-label="กระเป๋าใหม่">+</button></div>
    ${err?`<div class="card" style="border-color:#FCA5A5">${esc(err)}</div>`:''}
    ${now.length?(now.length>1?`<div class="hscroll">${now.map(big).join('')}</div>`:big(now[0])):''}
-   <div class="search">${ic('search',18)}<input id="qIn" placeholder="ค้นหากระเป๋า ปลายทาง หรือชื่อของ" value="${esc(S.q||'')}" oninput="S.q=this.value;renderLanding().then(()=>{const e=$('#qIn');e.focus();e.setSelectionRange(e.value.length,e.value.length)})"></div>
-   <div class="seg3">${[['future','กำลังจะไป'],['past','ที่ผ่านมา'],['undated','ยังไม่ระบุวัน']].map(([k,l])=>`<button class="${bagFilter===k?'on':''}" onclick="bagFilter='${k}';renderLanding()">${l}</button>`).join('')}</div>
-   <div class="card">${cur.length?cur.map(small).join(''):'<div class="empty">ไม่มีกระเป๋าในกลุ่มนี้</div>'}</div>
-   ${now.length?'':`<button class="btn soft block" style="border-radius:14px;min-height:52px" onclick="openCreate()">${ic('plus',18)} สร้างกระเป๋า</button>`}
+   <div class="search">${ic('search',18)}<input id="qIn" placeholder="ค้นหากระเป๋า ที่หมาย หรือของที่ฝาก" value="${esc(S.q||'')}" oninput="S.q=this.value;renderLanding().then(()=>{const e=$('#qIn');e.focus();e.setSelectionRange(e.value.length,e.value.length)})"></div>
+   <div class="seg3">${[['future','เร็ว ๆ นี้'],['past','ที่ผ่านมา'],['undated','ยังไม่ระบุวัน']].map(([k,l])=>`<button class="${bagFilter===k?'on':''}" onclick="bagFilter='${k}';renderLanding()">${l}</button>`).join('')}</div>
+   <div class="card">${cur.length?cur.map(small).join(''):'<div class="empty">ในนี้ยังว่าง</div>'}</div>
+   ${now.length?'':`<button class="btn soft block" style="border-radius:14px;min-height:52px" onclick="openCreate()">${ic('plus',18)} กระเป๋าใหม่</button>`}
 `;
 }
 let reqSel=null;
@@ -579,9 +816,9 @@ function requestView(linkCard){
   const done=r=>r.recv&&r.recv<today;
   const row=r=>`<div class="swipe" data-id="${r.id}"><div class="del" onclick="hideReq('${r.id}')">ลบ</div><div class="srow" onclick="${reqSel?`toggleSel('${r.id}')`:`location.href='?t=${r.id}&r=1'`}">${reqSel?`<span class="selc ${reqSel.has(r.id)?'on':''}">${reqSel.has(r.id)?ic('check',14):''}</span>`:''}<div class="sbody"><div class="n">${esc(r.name)}</div><div class="m">ฝากกับ ${esc(r.shopper||'')}${r.recv?' · รับของ '+dfmt(r.recv):''}${done(r)?' · ได้ของแล้ว':''}</div></div></div></div>`;
   setTimeout(bindSwipes,0);
-  return `<div class="home-head"><img src="${ICON}" alt=""><div style="flex:1"><div class="app">ฝากซื้อ</div><div class="muted">กระเป๋าเพื่อนที่ฉันฝากไว้</div></div>${recent.length?`<button class="btn ghost sm" onclick="reqSel=reqSel?null:new Set();renderLanding()">${reqSel?'เสร็จ':'เลือก'}</button>`:''}</div>
+  return `<div class="home-head"><img src="${ICON}" alt=""><div style="flex:1"><div class="app">รายการที่ชอบ</div><div class="muted">กระเป๋าเพื่อนที่ฉันฝากไว้</div></div>${recent.length?`<button class="btn ghost sm" onclick="reqSel=reqSel?null:new Set();renderLanding()">${reqSel?'เสร็จ':'เลือก'}</button>`:''}</div>
    ${reqSel&&reqSel.size?`<button class="btn danger block" style="margin-bottom:10px" onclick="hideSelected()">ลบ ${reqSel.size} รายการ</button>`:''}
-   ${recent.length?recent.map(row).join('')+`<p class="muted" style="text-align:center;font-size:12px">เลื่อนซ้ายเพื่อลบออกจากรายการ</p>`:emptyState('ยังไม่ได้ฝากซื้อกับใคร','กดลิงค์ที่เพื่อนส่งมา หรือวางลิงค์ด้านล่าง')}
+   ${recent.length?recent.map(row).join('')+`<p class="muted" style="text-align:center;font-size:12px">เลื่อนซ้ายเพื่อลบรายการ</p>`:emptyState('ยังไม่ส่งรายการช็อปมาเลย','กดลิงค์ที่เพื่อนส่งมา หรือวางลิงค์ด้านล่าง')}
    <div class="linkbar"><div class="inner"><input id="tLink" placeholder="วางลิงค์ที่เพื่อนส่งมา"><button class="btn sm" onclick="openLink()">ไป</button></div></div>`;
 }
 function bindSwipes(){document.querySelectorAll('.swipe').forEach(el=>{let x0=null;el.ontouchstart=e=>{x0=e.touches[0].clientX};el.ontouchmove=e=>{if(x0===null)return;const dx=e.touches[0].clientX-x0;if(dx<-40){el.classList.add('open');document.querySelectorAll('.swipe.open').forEach(o=>{if(o!==el)o.classList.remove('open')})}else if(dx>20)el.classList.remove('open')};el.ontouchend=()=>{x0=null}})}
@@ -589,16 +826,16 @@ function hideReq(id){const hd=new Set(LS('toast:hiddenReq')||[]);hd.add(id);LS('
 function toggleSel(id){if(!reqSel)return;reqSel.has(id)?reqSel.delete(id):reqSel.add(id);renderLanding()}
 function hideSelected(){const hd=new Set(LS('toast:hiddenReq')||[]);reqSel.forEach(id=>hd.add(id));LS('toast:hiddenReq',[...hd]);LS('toast:recent',(LS('toast:recent')||[]).filter(r=>!reqSel.has(r.id)));const n=reqSel.size;reqSel=null;toast('ลบแล้ว '+n+' รายการ');renderLanding()}
 function pickCover(inp,id){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');const s=Math.min(1,900/Math.max(im.width,im.height));c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);LS('toast:cover:'+id,c.toDataURL('image/jpeg',.7));renderLanding()};im.src=r.result};r.readAsDataURL(f)}
-const FEE_TYPES=[['none','ไม่คิดเงิน',''],['perItem','ต่อชิ้น','THB/ชิ้น'],['perKg','ตามน้ำหนัก','THB/กก.'],['percent','ร้อยละ','% ของราคาของ']];
+const FEE_TYPES=[['none','ไม่คิดเงิน',''],['perItem','ต่อชิ้น','THB/ชิ้น'],['perKg','ตามน้ำหนัก','THB/กก.'],['percent','ร้อยละ','% ของราคาสินค้า']];
 let feeType='perItem';
 function openCreate(){
-  sheet(`<h2>สร้างกระเป๋า</h2>
+  sheet(`<h2>กระเป๋าใหม่</h2>
    <div class="field"><label>ปลายทาง</label><input id="tName" placeholder="เช่น Tokyo, เชียงใหม่, สยาม"></div>
    <div class="row"><div class="field"><label>วันรับของ</label><input id="tRecv" type="date"></div><div class="field"><label>ปิดรับฝาก (ไม่บังคับ)</label><input id="tClose" type="date"></div></div>
-   <div class="row"><div class="field"><label>สกุลเงินที่ใช้ซื้อ</label><select id="tCur" onchange="rateForCur()">${CURS.map(c=>`<option ${c==='JPY'?'selected':''}>${c}</option>`).join('')}</select></div>
+   <div class="row"><div class="field"><label>สกุลเงินที่ใช้</label><select id="tCur" onchange="rateForCur()">${CURS.map(c=>`<option ${c==='JPY'?'selected':''}>${c}</option>`).join('')}</select></div>
    <div class="field"><label>เรต 1 <span id="rateLbl">JPY</span> = ? THB</label><input id="tRate" inputmode="decimal" placeholder="กำลังดึง…"></div></div>
-   <div class="approx" style="margin:0 0 12px">ล็อกเรตนี้ทั้งกระเป๋า เริ่มจากเรตวันนี้ แก้ได้ · ค่าฝากซื้อและรายละเอียดตั้งได้ที่ไอคอนดินสอหลังสร้าง</div>
-   <button class="btn block" onclick="createTrip()">สร้างกระเป๋าและรับลิงค์</button>`);
+   <div class="approx" style="margin:0 0 12px">ล็อกเรตนี้ทั้งกระเป๋า เริ่มจากเรตวันนี้ แก้ได้ภายหลัง<br>ค่าฝากซื้อและรายละเอียดตั้งได้ที่ไอคอนดินสอหลังสร้าง</div>
+   <button class="btn block" onclick="createTrip()">เปิดกระเป๋า</button>`);
   rateForCur();
 }
 async function rateForCur(){const c=$('#tCur').value;$('#rateLbl').textContent=c;const r=await fetchRate(c);if($('#tRate')&&$('#tCur')&&$('#tCur').value===c)$('#tRate').value=r?(c==='THB'?'1':r.toFixed(4)):''}
@@ -616,8 +853,8 @@ function openEdit(){
      <div class="field" id="feeVal"><label id="feeLbl"></label><input id="tFee" inputmode="decimal" value="${(t.fee&&t.fee.value)||''}" placeholder="เช่น 50"></div>
    </div>
    <div id="catBox" class="hidden"><div id="catRows"></div><button type="button" class="btn ghost block sm" style="margin:8px 0 12px" onclick="addCat()">+ เพิ่มหมวดสินค้า</button></div>
-   <div class="field"><label>ของเกินราคานี้ขอมัดจำก่อน (THB)</label><input id="eDeposit" inputmode="decimal" value="${t.deposit||''}" placeholder="เว้นว่าง = ไม่ต้องมัดจำ"></div>
-   <div class="field"><label>รายละเอียดฝากซื้อ (ข้อความถึงเพื่อน)</label><textarea id="eNote" placeholder="เช่น ของเหลวไม่รับนะ · ของหนักคิดเพิ่ม">${esc(t.note||'')}</textarea></div>
+   <div class="field"><label>ยอดเกินนี้ ขอวางมัดจำไว้หน่อย (THB)</label><input id="eDeposit" inputmode="decimal" value="${t.deposit||''}" placeholder="เว้นว่าง = ไม่ต้องมัดจำ"></div>
+   <div class="field"><label>ข้อความถึงเพื่อน</label><textarea id="eNote" placeholder="เช่น ของเหลวไม่รับนะ · ของหนักคิดเพิ่ม">${esc(t.note||'')}</textarea></div>
    <button class="btn block" onclick="saveEdit()">บันทึก</button>
    <a class="btn ghost block" style="margin-top:8px" href="?t=${S.tripId}&r=1">ดูมุมของเพื่อน</a>`);
   feeUI();feeModeUI();
@@ -631,7 +868,7 @@ function doAddCat(){const n=$('#newCatName').value.trim();if(!n)return;if(catLis
 async function saveEdit(){const name=$('#eName').value.trim();if(!name)return toast('ใส่ปลายทางก่อนนะ');const patch={name,recv:$('#eRecv').value||null,close:$('#eClose').value||null,rate:+$('#eRate').value||S.trip.rate||1,feeMode,cats:catList,catFees,fee:{type:feeType,value:feeType==='none'?0:(+($('#tFee')||{}).value||0)},deposit:+$('#eDeposit').value||null,note:$('#eNote').value.trim()};
   try{await store.updateTrip(S.tripId,patch);Object.assign(S.trip,patch);S.user&&LS('toast:cache:'+S.user.uid,null);closeSheet();toast('บันทึกแล้ว');render()}catch(e){toast('บันทึกไม่ได้: '+(e.code||e.message))}}
 function feeUI(){const t=FEE_TYPES.find(x=>x[0]===feeType);$('#feeVal').classList.toggle('hidden',feeType==='none');$('#feeLbl').textContent=t[2]}
-function oneFeeText(f){if(!f||f.type==='none'||!f.value)return 'ไม่คิดเงิน';return f.type==='perItem'?`THB ${fmt(f.value)} ต่อชิ้น`:f.type==='percent'?`${f.value}% ของราคาของ`:`THB ${fmt(f.value)} ต่อกก.`}
+function oneFeeText(f){if(!f||f.type==='none'||!f.value)return 'ไม่คิดเงิน';return f.type==='perItem'?`THB ${fmt(f.value)} ต่อชิ้น`:f.type==='percent'?`${f.value}% ของราคาสินค้า`:`THB ${fmt(f.value)} ต่อกก.`}
 function feeText(t){t=t||S.trip;if(t.feeMode==='cat'&&t.catFees){const rows=cats(t).map(c=>`${c} ${oneFeeText(t.catFees[c])}`);return 'ค่าฝากซื้อ · '+rows.join(' · ')}
   const f=t.fee||{type:'none'};if(f.type==='none'||!f.value)return 'ไม่คิดค่าฝากซื้อ';return 'ค่าฝากซื้อ '+oneFeeText(f)}
 function feeRule(i,t){t=t||S.trip;if(i&&i.feeOverride&&i.feeOverride.type)return i.feeOverride;if(t.feeMode==='cat'&&t.catFees)return t.catFees[i&&i.cat]||{type:'none'};return t.fee||{type:'none'}}
@@ -647,7 +884,7 @@ function profileView(){
    <div class="card" style="display:flex;gap:16px;align-items:center">
      <button type="button" onclick="document.getElementById('avIn').click()" style="border:0;padding:0;width:84px;height:84px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;color:var(--accent-deep);position:relative;flex:none;cursor:pointer">${av?`<img src="${av}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:ic('user',38)}<span style="position:absolute;right:-2px;bottom:-2px;width:30px;height:30px;border-radius:50%;background:var(--accent);border:2px solid var(--card);display:flex;align-items:center;justify-content:center;color:var(--on-accent)">${ic('camera',15)}</span></button>
      <input id="avIn" class="vh" type="file" accept="image/*">
-     <div style="flex:1;min-width:0"><div class="field" style="margin:0"><label>ชื่อที่เพื่อนจะเห็น</label><input id="nmIn" value="${esc(S.user.displayName||'')}" onchange="saveName()"></div><div class="muted" style="font-size:12px;margin-top:4px">ไอดี @${esc(uname)} · ให้เพื่อนใช้เพิ่มคุณ</div></div>
+     <div style="flex:1;min-width:0"><div class="field" style="margin:0"><label>ชื่อที่เพื่อนจะเห็น</label><input id="nmIn" value="${esc(S.user.displayName||'')}" onchange="saveName()"></div><div class="muted" style="font-size:12px;margin-top:4px">ไอดี @${esc(uname)} · ส่งให้เพื่อนไว้เพิ่มคุณ</div></div>
    </div>
    <div class="card">
    <div class="card">
@@ -658,7 +895,7 @@ function profileView(){
      <div class="prow" onclick="changePw()" style="cursor:pointer"><span>เปลี่ยนรหัสผ่าน</span><span class="v">${ic('chev',16,'style="transform:rotate(-90deg)"')}</span></div>
    </div>
    <button class="btn ghost block" style="color:#B91C1C" onclick="logout()">ออกจากระบบ</button>
-   <p class="muted" style="font-size:13px;margin-top:16px">เปิดใน Safari/Chrome แล้ว "เพิ่มไปยังหน้าจอโฮม" เพื่อใช้เป็นแอพ · เพื่อนที่ฝากของไม่ต้องมีบัญชี</p>
+   <p class="muted" style="font-size:13px;margin-top:16px">เปิดใน Safari/Chrome แล้ว "เพิ่มไปยังหน้าจอโฮม" เพื่อใช้เป็นแอพ · ไม่จำเป็นต้องมีบัญชี</p>
    <div class="ver" style="text-align:left;padding:8px 0">Toast v${VERSION}${store.online?'':' · '+(DEMO?'โหมดตัวอย่าง':'โหมดทดลองในเครื่อง')}</div>`;
 }
 async function clearDemo(){try{const all=await store.allMine(S.user.uid);let n=0;for(const t of all){if(t.demo){await store.deleteTrip(t.id);n++}}const rec=(LS('toast:recent')||[]).filter(r=>!all.some(t=>t.id===r.id&&t.demo));LS('toast:recent',rec);myTripsCache=null;S.user&&LS('toast:cache:'+S.user.uid,null);toast('ลบแล้ว '+n+' กระเป๋า');renderLanding()}catch(e){toast('ลบไม่ได้: '+(e.code||e.message)+' — ต้องอัปเดต Rules ก่อน')}}
@@ -666,8 +903,8 @@ async function clearDemo(){try{const all=await store.allMine(S.user.uid);let n=0
 function friendsView(){
   const fs=S.friends||[];
   return `<div style="display:flex;align-items:center;gap:8px;margin:6px 0 14px"><button class="btn ghost sm" style="width:40px;padding:0" onclick="homeTab='profile';renderLanding()" aria-label="กลับ">${ic('chev',18,'style="transform:rotate(90deg)"')}</button><h1 style="flex:1;font-size:28px;color:var(--accent-deep)">เพื่อน</h1><button class="btn sm" style="width:44px;padding:0;font-size:24px;line-height:1" onclick="addFriendSheet()" aria-label="เพิ่มเพื่อน">+</button></div>
-   <p class="muted" style="margin-bottom:10px">ไอดีของคุณ <b>@${esc(S.myUsername||'')}</b> ${navigator.share?`· <button class="btn ghost sm" onclick="navigator.share({title:'เพิ่มฉันใน Toast',url:location.origin+location.pathname+'?add=${esc(S.myUsername||'')}'})">ส่งให้เพื่อน</button>`:''}</p>
-   ${fs.length?`<div class="card">${fs.map(f=>`<div class="smallcard"><div><div class="n">${esc(f.name||'(ไม่มีชื่อ)')}</div><div class="m">@${esc(f.username||'')}</div></div><button class="btn ghost sm" onclick="dropFriend('${f.uid}')">ลบ</button></div>`).join('')}</div>`:emptyState('ยังไม่มีเพื่อน','กด + แล้วใส่ไอดีเพื่อน (ยูเซอร์เนมที่ใช้ล็อกอิน)')}`;
+   <p class="muted" style="margin-bottom:10px">ไอดีของคุณ <b>@${esc(S.myUsername||'')}</b> ${navigator.share?`· <button class="btn ghost sm" onclick="navigator.share({title:'มาเป็นเพื่อนกันใน Toast',url:location.origin+location.pathname+'?add=${esc(S.myUsername||'')}'})">ส่งให้เพื่อน</button>`:''}</p>
+   ${fs.length?`<div class="card">${fs.map(f=>`<div class="smallcard"><div><div class="n">${esc(f.name||'(ไม่มีชื่อ)')}</div><div class="m">@${esc(f.username||'')}</div></div><button class="btn ghost sm" onclick="dropFriend('${f.uid}')">ลบ</button></div>`).join('')}</div>`:emptyState('ยังไม่มีเพื่อนในแอพ','กด + แล้วใส่ ID เพื่อน (ยูเซอร์เนมที่ใช้ล็อกอิน)')}`;
 }
 function addFriendSheet(){sheet(`<h2>เพิ่มเพื่อน</h2><div class="field"><label>ไอดีเพื่อน (ยูเซอร์เนมที่ใช้ล็อกอิน)</label><input id="fcode" placeholder="เช่น namwan99" autocapitalize="none"></div><button class="btn block" onclick="addFriendByCode()">เพิ่ม</button>`);setTimeout(()=>$('#fcode')&&$('#fcode').focus(),50)}
 async function addFriendByCode(){const c=$('#fcode').value.trim();if(!c)return;const f=await store.findByUsername(c);if(!f)return toast('ไม่พบไอดีนี้');if(f.uid===S.user.uid)return toast('นั่นไอดีของคุณเอง');if((S.friends||[]).some(x=>x.uid===f.uid))return toast('เป็นเพื่อนกันอยู่แล้ว');await store.addFriend(S.user,f);S.friends=await store.myFriends(S.user.uid);closeSheet();toast('เพิ่ม '+(f.name||'เพื่อน')+' แล้ว');renderLanding()}
@@ -683,7 +920,7 @@ function setThemeP(t){setTheme(t);closeSheet();renderLanding()}
 function pickMode(){optSheet('ธีม',[['light','สว่าง'],['dark','มืด'],['auto','ตามเครื่อง']],LS('toast:mode')||'auto','setMode')}
 function setMode(m){LS('toast:mode',m);applyMode();closeSheet();renderLanding()}
 function changePw(){sheet(`<h2>เปลี่ยนรหัสผ่าน</h2><div class="field"><label>รหัสผ่านใหม่</label><input id="pw1" type="password" autocomplete="new-password" placeholder="อย่างน้อย 6 ตัว"></div><div class="field"><label>ยืนยันรหัสผ่านใหม่</label><input id="pw2" type="password" autocomplete="new-password"></div><button class="btn block" onclick="doChangePw()">บันทึก</button>`)}
-async function doChangePw(){const a=$('#pw1').value,b=$('#pw2').value;if(a.length<6)return toast('รหัสผ่านต้องอย่างน้อย 6 ตัว');if(a!==b)return toast('รหัสผ่านไม่ตรงกัน');try{if(AUTH&&!DEMO)await AUTH.currentUser.updatePassword(a);closeSheet();toast('เปลี่ยนรหัสผ่านแล้ว')}catch(e){toast(e.code==='auth/requires-recent-login'?'เพื่อความปลอดภัย ออกจากระบบแล้วเข้าใหม่ก่อนเปลี่ยนรหัส':authMsg(e))}}
+async function doChangePw(){const a=$('#pw1').value,b=$('#pw2').value;if(a.length<6)return toast('รหัสผ่านอย่างน้อย 6 ตัว');if(a!==b)return toast('รหัสผ่านไม่ตรงกัน');try{if(AUTH&&!DEMO)await AUTH.currentUser.updatePassword(a);closeSheet();toast('เปลี่ยนรหัสผ่านแล้ว')}catch(e){toast(e.code==='auth/requires-recent-login'?'เพื่อความปลอดภัย ออกจากระบบแล้วเข้าใหม่ก่อนเปลี่ยนรหัส':authMsg(e))}}
 async function seedDemo(silent){
   if(!S.user){toast('เข้าสู่ระบบก่อน');return}
   const d=days=>{const x=new Date(todayStr()+'T00:00');x.setDate(x.getDate()+days);return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`};
@@ -694,15 +931,15 @@ async function seedDemo(silent){
     {requester:'น้ำหวาน',name:'Kit Kat ชาเขียว',cat:'ของกิน',price:980,qty:3,shop:'Don Quijote Dotonbori',status:'delivered',paid:950},
     {requester:'น้ำหวาน',name:'Royce Nama Chocolate',cat:'ของกิน',price:1500,qty:2,shop:'Kansai Airport',status:'delivered',paid:1500},
     {requester:'บอส',name:'ยาหยอดตา Rohto Z',cat:'ยา/วิตามิน',price:700,qty:4,shop:'Matsumoto Kiyoshi',status:'delivered',paid:680},
-    {requester:'บอส',name:'Uniqlo Airism เสื้อกล้าม M',cat:'เสื้อผ้า',price:1990,qty:2,shop:'Uniqlo Shinsaibashi',status:'notfound'},
+    {requester:'บอส',name:'Uniqlo Airism เสื้อกล้าม M',cat:'แฟชั่น',price:1990,qty:2,shop:'Uniqlo Shinsaibashi',status:'notfound'},
   ]);
   await mk('Tokyo',"JPY",d(-2),d(6),[
     {requester:'น้ำหวาน',name:'Seiko Presage SRPB41',cat:'ของใช้',price:60000,budget:65000,qty:1,shop:'Seiko สาขาไหนก็ได้',detail:'หน้าปัดขาว สายเหล็ก',status:'searching',fallback:'contact',contact:'LINE: namwan99'},
     {requester:'มายด์',name:'Shiseido Ultimune 50ml',cat:'เครื่องสำอาง',price:9900,qty:1,shop:'Ginza Six',status:'found',paid:9500},
     {requester:'มายด์',name:'Tokyo Banana',cat:'ของกิน',price:1200,qty:5,shop:'Tokyo Station',status:'requested',fallback:'substitute',substitute:{name:'Tokyo Banana รสช็อกโกแลต',price:1300,qty:5,detail:'',shop:'Tokyo Station',photo:''}},
-    {requester:'ปอ',name:'Onitsuka Tiger Mexico 66 เหลือง 40',cat:'เสื้อผ้า',price:13000,qty:1,shop:'Onitsuka Tiger Omotesando',status:'packed',paid:12800},
+    {requester:'ปอ',name:'Onitsuka Tiger Mexico 66 เหลือง 40',cat:'แฟชั่น',price:13000,qty:1,shop:'Onitsuka Tiger Omotesando',status:'packed',paid:12800},
     {requester:'ปอ',name:'Daiso ที่คั่นหนังสือ',cat:'ของใช้',price:110,qty:10,shop:'Daiso Harajuku',status:'cancelled'},
-  ],{fee:{type:'perItem',value:50},rate:0.24,deposit:5000,note:'ไม่รับของเหลวเกิน 100ml'});
+  ],{fee:{type:'perItem',value:50},rate:0.24,deposit:5000,note:'ของเหลวเกิน 100ml ไม่รับนะ'});
   await mk('Hong Kong',"HKD",d(-122),d(-115),[
     {requester:'มายด์',name:'Jenny Bakery คุกกี้เนย 4 mix',cat:'ของกิน',price:170,qty:2,shop:'Jenny Bakery Tsim Sha Tsui',status:'delivered',paid:170},
     {requester:'ปอ',name:'Lee Kum Kee ซอส XO',cat:'ของกิน',price:88,qty:3,shop:'Wellcome',status:'delivered',paid:85},
@@ -718,7 +955,7 @@ async function seedDemo(silent){
     {requester:'น้ำหวาน',name:'Laneige Lip Sleeping Mask',cat:'เครื่องสำอาง',price:22000,qty:2,shop:'Olive Young Myeongdong',status:'requested'},
     {requester:'ต้น',name:'สาหร่าย Kimnori กล่องใหญ่',cat:'ของกิน',price:15000,qty:3,shop:'Lotte Mart Seoul Station',status:'requested'},
   ]);
-  const friend=async(id,name,shopper,currency,items)=>{await store.createTrip({id,name,shopper,ownerUid:S.user.uid,demoFriend:true,invited:[S.user.uid],currency,rate:RATES[currency]||1,close:d(20),recv:d(28),createdAt:Date.now(),demo:true,fee:{type:'percent',value:5},note:'ค่าหิ้ว 5% นะจ๊ะ โอนตอนของถึง'});let t=Date.now()-86400e3;let n=0;for(const it of items){await store.addItem(id,{id:'i'+(++n),requester:S.user.displayName||'ฉัน',rid:'u-'+S.user.uid,requesterUid:S.user.uid,photo:'',budget:null,detail:'',mapUrl:'',lat:null,lng:null,fallback:'contact',log:[{s:'requested',at:t}],...it,createdAt:t});t+=3600e3;}
+  const friend=async(id,name,shopper,currency,items)=>{await store.createTrip({id,name,shopper,ownerUid:S.user.uid,demoFriend:true,invited:[S.user.uid],currency,rate:RATES[currency]||1,close:d(20),recv:d(28),createdAt:Date.now(),demo:true,fee:{type:'percent',value:5},note:'ค่าฝากซื้อ 5% นะ โอนตอนของถึงมือ'});let t=Date.now()-86400e3;let n=0;for(const it of items){await store.addItem(id,{id:'i'+(++n),requester:S.user.displayName||'ฉัน',rid:'u-'+S.user.uid,requesterUid:S.user.uid,photo:'',budget:null,detail:'',mapUrl:'',lat:null,lng:null,fallback:'contact',log:[{s:'requested',at:t}],...it,createdAt:t});t+=3600e3;}
     const recent=(LS('toast:recent')||[]).filter(x=>x.id!==id);recent.unshift({id,name,shopper});LS('toast:recent',recent.slice(0,12));};
   await friend('d'+(await sha(S.user.uid+'London')).slice(0,9),'London','บอส','GBP',[
     {name:'Whittard Earl Grey',cat:'ของกิน',price:12,qty:2,shop:'Whittard Covent Garden',status:'found',paid:12},
@@ -751,7 +988,7 @@ function render(){ if(!S.trip)return; document.body.classList.remove('landing');
 function tabsHTML(){
   const t=(id,label,svg)=>`<button class="${S.tab===id?'on':''}" onclick="S.tab='${id}';render()">${svg}<span>${label}</span></button>`;
   return `<nav class="tabs"><div class="inner">
-   ${t('people','ผู้ฝาก','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M15 15a4.5 4.5 0 0 1 6.5 4"/></svg>')}
+   ${t('people','เพื่อน','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M15 15a4.5 4.5 0 0 1 6.5 4"/></svg>')}
    ${t('items','รายการ','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h13"/><circle cx="19" cy="17" r="2.5"/></svg>')}
   </div></nav>`;
 }
@@ -769,8 +1006,8 @@ function countBadges(list){
 function peopleView(){
   const by={};S.items.forEach(i=>(by[i.requester]=by[i.requester]||[]).push(i));
   const names=Object.keys(by).sort((a,b)=>a.localeCompare(b,'th'));
-  const fab=`<div class="fab"><button class="btn soft block" onclick="openItemForm()">${ic('plus',18)} เพิ่มรายการแทนเพื่อน</button></div>`;
-  if(!names.length)return emptyState('ยังไม่มีใครฝากซื้อ','ส่งลิงค์ให้เพื่อนจากแท็บ "แชร์ลิงค์" หรือเพิ่มแทนเพื่อนได้เลย')+fab;
+  const fab=`<div class="fab"><button class="btn soft block" onclick="openItemForm()">${ic('plus',18)} ใส่ของให้เพื่อน</button></div>`;
+  if(!names.length)return emptyState('กระเป๋ายังว่างอยู่เลย','ส่งลิงค์ให้เพื่อน หรือจะใส่ให้เพื่อนเองก็ได้')+fab;
   return fab+
    names.map(n=>`<details class="card acc" ${names.length<4?'open':''}><summary><div class="av">${esc(initials(n))}</div><div class="who"><b>${esc(n)}</b><div class="muted">${by[n].length} รายการ</div></div>${countBadges(by[n])}<span class="caret">${ic('chev',16)}</span></summary>${by[n].map(itemRow).join('')}</details>`).join('');
 }
@@ -797,36 +1034,36 @@ function itemsView(){
   const nOff=S.items.filter(i=>offSet.includes(i.status)).length;
   let body='';
   if(itemSort==='cat'&&list.length){const g={};list.forEach(i=>(g[i.cat||'อื่น ๆ']=g[i.cat||'อื่น ๆ']||[]).push(i));body=Object.keys(g).map(k=>`<div class="card"><h3 style="margin-bottom:4px">${esc(k)} <span class="muted">${g[k].length}</span></h3>${g[k].map(itemRow).join('')}</div>`).join('');}
-  else body=`<div class="card">${list.length?list.map(itemRow).join(''):'<div class="empty">ยังไม่มีของ</div>'}</div>`;
+  else body=`<div class="card">${list.length?list.map(itemRow).join(''):'<div class="empty">ยังไม่มีของในกระเป๋า</div>'}</div>`;
   return `
    <div class="seg"><button class="${f.view!=='off'?'on':''}" onclick="S.filter.view='all';render()">รายการทั้งหมด</button><button class="${f.view==='off'?'on':''}" onclick="S.filter.view='off';render()">ยกเลิก${nOff?' ('+nOff+')':''}</button></div>
    <div class="seg3"><button class="${itemSort==='cat'?'on':''}" onclick="itemSort='cat';render()">ตามหมวด</button><button class="${itemSort==='status'?'on':''}" onclick="itemSort='status';render()">ตามสถานะ</button><button class="${itemSort==='near'?'on':''}" onclick="itemSort='near';S.pos?render():locateMe()">${ic('pin',14)} ร้านใกล้ฉัน</button></div>
-   ${list.length?body:'<div class="card"><div class="empty">ยังไม่มีของ</div></div>'}
+   ${list.length?body:'<div class="card"><div class="empty">ยังไม่มีของในกระเป๋า</div></div>'}
    ${S.items.some(i=>['cancelled','notfound','delivered'].includes(i.status))?`<button class="btn ghost block sm" style="margin-top:4px" onclick="clearDone()">ล้างรายการที่จบแล้ว</button>`:''}`;
 }
 function haversine(a,b){const R=6371,d=x=>x*Math.PI/180;const dl=d(b.lat-a.lat),dg=d(b.lng-a.lng);const h=Math.sin(dl/2)**2+Math.cos(d(a.lat))*Math.cos(d(b.lat))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
-function locateMe(){navigator.geolocation.getCurrentPosition(p=>{S.pos={lat:p.coords.latitude,lng:p.coords.longitude};itemSort='near';render()},()=>toast('ขอตำแหน่งไม่ได้ ลองเปิด Location ให้เบราว์เซอร์'),{enableHighAccuracy:true,timeout:8000})}
+function locateMe(){navigator.geolocation.getCurrentPosition(p=>{S.pos={lat:p.coords.latitude,lng:p.coords.longitude};itemSort='near';render()},()=>toast('ยังหาโลเคชันไม่เจอ ลองเปิดสิทธิ์ตำแหน่งในเบราว์เซอร์นะ'),{enableHighAccuracy:true,timeout:8000})}
 function openShare(){
   const link=location.origin+location.pathname+`?t=${S.tripId}&r=1`;
   sheet(`<h2>แชร์กระเป๋า</h2>
-    <h3>ลิงค์กลุ่ม</h3><p class="muted">โยนเข้ากลุ่มได้เลย เพื่อนกดแล้วฝากได้ทันที ไม่ต้องสมัคร · ทุกคนกดลิงค์เดียวกันแต่เห็นแค่ของตัวเอง</p>
+    <h3>ลิงค์กลุ่ม</h3><p class="muted">ลิงก์เดียวให้ทั้งกลุ่ม ฝากได้ทันที ไม่ต้องเป็นสมาชิก<br>ทุกคนกดลิงค์เดียวกัน แต่เห็นแค่ของตัวเอง</p>
     <div class="share" style="margin:8px 0"><code>${esc(link)}</code><button class="btn sm" onclick="copyLink('${link}')">คัดลอก</button></div>
     ${navigator.share?`<button class="btn block ghost" onclick="navigator.share({title:'ฝากซื้อกับ ${esc(S.trip.shopper)} · ${esc(S.trip.name)}',url:'${link}'})">แชร์…</button>`:''}
-    <h3 style="margin-top:18px">ลิงค์ส่วนตัว</h3><p class="muted">สำหรับเพื่อนที่สลับเครื่องบ่อย ใส่ชื่อแล้วส่งให้คนนั้นโดยตรง</p>
+    <h3 style="margin-top:18px">ลิงค์ส่วนตัว</h3><p class="muted">ลิงค์เฉพาะบุคคล</p>
     <div class="row" style="margin-top:8px"><input id="plName" placeholder="ชื่อเพื่อน" style="padding:7px 12px;border:1.5px solid var(--line);border-radius:12px;height:38px;background:var(--card)"><button class="btn sm" onclick="personalLink()">สร้าง</button></div><div id="plOut"></div>`);
 }
 async function toggleInvite(fuid,on){const inv=new Set(S.trip.invited||[]);on?inv.add(fuid):inv.delete(fuid);const arr=[...inv];await store.updateTrip(S.tripId,{invited:arr});S.trip.invited=arr;toast(on?'ส่งให้แล้ว':'ยกเลิกแล้ว')}
 function personalLink(){const n=$('#plName').value.trim();if(!n)return toast('ใส่ชื่อเพื่อนก่อน');const tok=uid(8);const l=location.origin+location.pathname+`?t=${S.tripId}&r=1&p=${tok}&n=${encodeURIComponent(n)}`;$('#plOut').innerHTML=`<div class="share" style="margin-top:8px"><code>${esc(l)}</code><button class="btn sm" onclick="copyLink('${l}')">คัดลอก</button></div>`}
-function copyLink(l){navigator.clipboard.writeText(l).then(()=>toast('คัดลอกลิงค์แล้ว'))}
+function copyLink(l){navigator.clipboard.writeText(l).then(()=>toast('คัดลอกลิงค์แล้ว ส่งได้เลย'))}
 
 /* --- requester --- */
 function renderRequester(){
-  if(!S.me){shell(`<div class="card"><h2>สวัสดี</h2><p class="muted">บอกชื่อไว้หน่อย ${esc(S.trip.shopper)} จะได้รู้ว่าใครฝาก</p><div class="field" style="margin-top:10px"><input id="meName" placeholder="ชื่อเล่นของคุณ"></div><button class="btn block" onclick="S.me=$('#meName').value.trim();if(!S.me)return toast('ใส่ชื่อก่อนนะ');LS('toast:me',S.me);render()">เริ่มฝากซื้อ</button></div>`);return;}
+  if(!S.me){shell(`<div class="card"><h2>สวัสดี!</h2><p class="muted">บอกชื่อหน่อยนะ ${esc(S.trip.shopper)} จะได้รู้ว่ารายการฝากซื้อนี้ของใคร</p><div class="field" style="margin-top:10px"><input id="meName" placeholder="ชื่อเล่นของคุณ"></div><button class="btn block" onclick="S.me=$('#meName').value.trim();if(!S.me)return toast('ใส่ชื่อก่อนนะ');LS('toast:me',S.me);render()">ไปช็อปกัน</button></div>`);return;}
   const mine=S.items.filter(i=>i.rid&&i.rid===S.rid);
-  const t=S.trip;const closed=t.close&&t.close<todayStr();const rules=`<div class="card" style="padding:10px 14px"><div style="font-weight:500">รายละเอียดฝากซื้อ</div><div class="muted">${[t.recv?`รับของ ${dfmt(t.recv)}`:'',t.close?`ปิดรับฝาก ${dfmt(t.close)}${closed?' (ปิดแล้ว)':''}`:''].filter(Boolean).join(' · ')}${(t.recv||t.close)?'<br>':''}อัตรา 1 ${cur()} = ${(t.rate||1).toFixed(4)} THB · ${feeText(t)}${t.deposit?` · ของเกิน THB ${fmt(t.deposit)} โอนมัดจำก่อน`:''}${t.note?`<br>${esc(t.note)}`:''}</div></div>`;
+  const t=S.trip;const closed=t.close&&t.close<todayStr();const rules=`<div class="card" style="padding:10px 14px"><div style="font-weight:500">รายละเอียดฝากซื้อ</div><div class="muted">${[t.recv?`รับของ ${dfmt(t.recv)}`:'',t.close?`ปิดรับฝาก ${dfmt(t.close)}${closed?' (ปิดแล้ว)':''}`:''].filter(Boolean).join(' · ')}${(t.recv||t.close)?'<br>':''}อัตรา 1 ${cur()} = ${(t.rate||1).toFixed(4)} THB · ${feeText(t)}${t.deposit?` · มัดจำเมื่อเกิน THB ${fmt(t.deposit)} โอนมัดจำก่อน`:''}${t.note?`<br>${esc(t.note)}`:''}</div></div>`;
   shell(rules+`
-   ${closed?`<div class="card" style="text-align:center;color:var(--ink-2)">ปิดรับฝากแล้ว ติดต่อ ${esc(t.shopper)} โดยตรงถ้ามีของด่วน</div>`:`<button class="btn block" style="margin-bottom:12px" onclick="openItemForm()">+ ฝากซื้อของ</button>`}
-   ${mine.length?`<div class="card">${mine.map(itemRow).join('')}</div>`:emptyState('ยังไม่มีรายการ','กดปุ่มด้านบนเพื่อฝากของชิ้นแรก')}
+   ${closed?`<div class="card" style="text-align:center;color:var(--ink-2)">ปิดกระเป๋าแล้ว ทัก ${esc(t.shopper)} ตรงได้เลยถ้ามีอะไรด่วน</div>`:`<button class="btn block" style="margin-bottom:12px" onclick="openItemForm()">+ ฝากของเข้ากระเป๋า</button>`}
+   ${mine.length?`<div class="card">${mine.map(itemRow).join('')}</div>`:emptyState('ลิสต์ยังว่างอยู่','ชิ้นแรก เริ่มตรงนี้')}
    <p class="muted" style="text-align:center">ฝากในชื่อ <b>${esc(S.me)}</b> · <button class="btn ghost sm" onclick="S.me='';LS('toast:me','');render()">เปลี่ยนชื่อ</button></p>`);
 }
 function emptyState(t,s){return `<div class="empty"><img src="${ICON}" alt="" style="width:64px;height:64px;border-radius:14px;opacity:.7"><div>${esc(t)}</div><div class="muted">${esc(s)}</div></div>`}
@@ -841,16 +1078,16 @@ function openItemForm(){
   const asShopper=S.role==='shopper';
   sheet(`<h2>ฝากซื้อของ</h2>
    ${asShopper?`<div class="field"><label>ชื่อผู้ฝาก</label><input id="fWho" placeholder="เพื่อนคนไหน"></div>`:''}
-   <div class="field"><label>รูปสินค้า</label><div class="photobox" id="fBox" onclick="document.getElementById('fFile').click()"><img id="fImg" alt=""><span class="ph">${ic('camera',28)}เพิ่มรูปสินค้า</span></div><input id="fFile" class="vh" type="file" accept="image/*" onchange="pickPhoto(this,'fImg','main')"></div>
+   <div class="field"><label>รูปสินค้า</label><div class="photobox" id="fBox" onclick="document.getElementById('fFile').click()"><img id="fImg" alt=""><span class="ph">${ic('camera',28)}แตะใส่รูปของที่อยากได้</span></div><input id="fFile" class="vh" type="file" accept="image/*" onchange="pickPhoto(this,'fImg','main')"></div>
    <div class="field"><label>ชื่อสินค้า</label><input id="fName" placeholder="เช่น Kit Kat รสชาเขียว"></div>
    <div class="row"><div class="field"><label>ราคาที่เห็น (${cur()})</label><input id="fPrice" inputmode="decimal" oninput="approx('fPrice','aPrice')"><div class="approx" id="aPrice" style="margin:2px 0 0"></div></div><div class="field"><label>จำนวน</label><input id="fQty" inputmode="numeric" value="1"></div></div>
    <div class="field hidden" id="wBox"><label>น้ำหนักโดยประมาณ (กก.)</label><input id="fWeight" inputmode="decimal" placeholder="เช่น 1.5"></div>
    <div class="field"><label>งบไม่เกิน (${cur()}) ถ้าราคาต่างจากที่เห็น</label><input id="fBudget" inputmode="decimal" placeholder="เว้นว่างได้" oninput="approx('fBudget','aBudget')"><div class="approx" id="aBudget" style="margin:2px 0 0"></div></div>
    <div class="field"><label>ประเภท</label><div class="catpick" id="fCatPick">${cats().map((c,i)=>`<button type="button" class="chip ${i===0?'on':''}" onclick="pickCat(this)">${c}</button>`).join('')}</div></div>
-   <div class="field"><label>รายละเอียด / จุดสังเกต</label><textarea id="fDetail" placeholder="สี ขนาด รุ่น ห้ามซื้อแบบไหน"></textarea></div>
-   <div class="field"><label>ร้าน</label><input id="fShop" placeholder="ชื่อร้าน / สาขา"></div>
+   <div class="field"><label>รายละเอียดเพิ่มเติม</label><textarea id="fDetail" placeholder="สี ไซซ์ รุ่น หรือรายละเอียดที่อยากกำชับ"></textarea></div>
+   <div class="field"><label>ร้านค้า</label><input id="fShop" placeholder="ชื่อร้าน / สาขา"></div>
    <div class="field"><label>ตำแหน่งร้าน</label><div class="row"><input id="fLoc" placeholder="วางลิงค์ Google Maps"><button class="btn ghost sm" onclick="useHere()">ตรงนี้</button></div></div>
-   <h3 style="margin:14px 0 8px">ถ้าหาไม่เจอ ให้ทำยังไง</h3>
+   <h3 style="margin:14px 0 8px">ถ้าหาไม่เจอ เอายังไงดี</h3>
    <div class="opts">
    ${Object.entries(FALLBACK).map(([k,v],i)=>`<label class="opt"><input type="radio" name="fb" value="${k}" ${i===1?'checked':''} onchange="fbUI(this.value)"><span class="ring">${ic('check',14)}</span><span class="lbl">${v}</span></label>${k==='contact'?`<div class="optsub" id="contactBox"><div class="field" style="margin:0"><label>ทักฉันได้ที่ (LINE / โทร) — ไม่บังคับ</label><input id="fContact" placeholder="เช่น LINE: namwan99" value="${esc(LS('toast:contact')||'')}"></div></div>`:''}`).join('')}
    </div>
@@ -860,9 +1097,9 @@ function openItemForm(){
      <div class="field"><label>ชื่อสินค้า</label><input id="sName"></div>
      <div class="row"><div class="field"><label>ราคา (${cur()})</label><input id="sPrice" inputmode="decimal" oninput="approx('sPrice','aSPrice')"><div class="approx" id="aSPrice" style="margin:2px 0 0"></div></div><div class="field"><label>จำนวน</label><input id="sQty" inputmode="numeric" value="1"></div></div>
      <div class="field"><label>รายละเอียด</label><textarea id="sDetail"></textarea></div>
-     <div class="field"><label>ร้าน</label><input id="sShop"></div>
+     <div class="field"><label>ร้านค้า</label><input id="sShop"></div>
    </div>
-   <button class="btn block" onclick="saveItem()">ฝากซื้อ</button>`);
+   <button class="btn block" onclick="saveItem()">รายการที่ชอบ</button>`);
 }
 function fbUI(v){$('#subBox').classList.toggle('hidden',v!=='substitute');$('#contactBox').classList.toggle('hidden',v!=='contact')}
 function pickCat(b){[...b.parentNode.children].forEach(x=>x.classList.remove('on'));b.classList.add('on');wUI()}
@@ -881,22 +1118,22 @@ function parseLoc(s){
 async function saveItem(){
   const who=S.role==='shopper'?$('#fWho').value.trim():S.me;
   const name=$('#fName').value.trim();
-  if(!who||!name){toast('ใส่ชื่อผู้ฝากและชื่อสินค้าก่อน');return}
-  if(photoData.length>900000){toast('รูปใหญ่เกินไป ลองรูปอื่น');return}
+  if(!who||!name){toast('ใส่ชื่อและของที่อยากได้เลย');return}
+  if(photoData.length>900000){toast('รูปใหญ่ไปนิด ลองเลือกรูปอื่นนะ');return}
   const catSel=(($('#fCatPick .on')||{}).textContent)||cats()[0];
   if(feeRule({cat:catSel},S.trip).type==='perKg'&&!(+($('#fWeight')||{}).value)){toast('หมวดนี้คิดค่าฝากซื้อตามน้ำหนัก ใส่น้ำหนักด้วยนะ');return}
   const loc=parseLoc($('#fLoc').value)||{};
   const fb=$('input[name=fb]:checked').value;const contact=$('#fContact').value.trim();if(contact)LS('toast:contact',contact);
   const it={id:uid(8),requester:who,name,photo:photoData,price:+$('#fPrice').value||null,budget:+$('#fBudget').value||null,qty:+$('#fQty').value||1,weight:$('#fWeight')?(+$('#fWeight').value||null):null,cat:($('#fCatPick .on')||{}).textContent||cats()[0],detail:$('#fDetail').value.trim(),shop:$('#fShop').value.trim(),lat:loc.lat??null,lng:loc.lng??null,mapUrl:loc.mapUrl||'',fallback:fb,contact:contact||'',rid:S.role==='requester'?S.rid:'',requesterUid:(S.role==='requester'&&S.user)?S.user.uid:'',status:'requested',log:[{s:'requested',at:Date.now()}]};
   if(fb==='substitute')it.substitute={name:$('#sName').value.trim(),photo:subPhotoData,price:+$('#sPrice').value||null,qty:+$('#sQty').value||1,detail:$('#sDetail').value.trim(),shop:$('#sShop').value.trim()};
-  await store.addItem(S.tripId,it);closeSheet();toast('ฝากแล้ว');
+  await store.addItem(S.tripId,it);closeSheet();toast('ใส่กระเป๋าแล้ว!');
 }
 
 function openItem(id){
   const i=S.items.find(x=>x.id===id);if(!i)return;
   const isShopper=S.role==='shopper';const off=['cancelled','notfound'].includes(i.status);
   const next=FLOW[FLOW.indexOf(i.status)+1];
-  const sub=i.substitute&&i.substitute.name?`<div class="card"><h3>ของทดแทนถ้าหาไม่เจอ</h3><div class="item">${i.substitute.photo?`<img class="thumb" src="${i.substitute.photo}">`:`<div class="thumb">${ic('swap',26)}</div>`}<div class="body"><div class="name">${esc(i.substitute.name)} <span class="muted">×${i.substitute.qty}</span></div><div class="meta">${i.substitute.price?money(i.substitute.price)+' · ':''}${esc(i.substitute.shop||'')}</div><div class="muted">${esc(i.substitute.detail||'')}</div></div></div></div>`:'';
+  const sub=i.substitute&&i.substitute.name?`<div class="card"><h3>ของสำรอง</h3><div class="item">${i.substitute.photo?`<img class="thumb" src="${i.substitute.photo}">`:`<div class="thumb">${ic('swap',26)}</div>`}<div class="body"><div class="name">${esc(i.substitute.name)} <span class="muted">×${i.substitute.qty}</span></div><div class="meta">${i.substitute.price?money(i.substitute.price)+' · ':''}${esc(i.substitute.shop||'')}</div><div class="muted">${esc(i.substitute.detail||'')}</div></div></div></div>`:'';
   sheet(`
    ${i.photo?`<img class="detail-img" src="${i.photo}" alt="">`:''}
    <h2>${esc(i.name)} <span class="muted">×${i.qty}</span></h2>
@@ -905,20 +1142,20 @@ function openItem(id){
    <div class="card">
      ${i.price?`<div>ราคาที่เห็น ${money(i.price)}${i.budget?`<br>งบไม่เกิน ${money(i.budget)}`:''}</div>`:''}
      ${i.detail?`<div style="margin-top:4px">${esc(i.detail)}</div>`:''}
-     ${i.shop||i.mapUrl?`<div class="meta" style="margin-top:6px">${ic('pin',14)} ${esc(i.shop||'ร้าน')} ${i.mapUrl?`<a href="${esc(i.mapUrl)}" target="_blank" rel="noopener">เปิดแผนที่</a>`:''}</div>`:''}
+     ${i.shop||i.mapUrl?`<div class="meta" style="margin-top:6px">${ic('pin',14)} ${esc(i.shop||'ร้านค้า')} ${i.mapUrl?`<a href="${esc(i.mapUrl)}" target="_blank" rel="noopener">เปิดแผนที่</a>`:''}</div>`:''}
      ${i.feeOverride&&i.feeOverride.type?`<div class="muted" style="margin-top:6px">ค่าฝากซื้อชิ้นนี้ ${oneFeeText(i.feeOverride)}${i.feeOverride.note?' · '+esc(i.feeOverride.note):''}</div>`:''}<div class="muted" style="margin-top:6px">ถ้าหาไม่เจอ: ${FALLBACK[i.fallback]}${i.fallback==='contact'&&i.contact?` — <b>${esc(i.contact)}</b>`:''}</div>
    </div>
    ${sub}
-   ${i.paid?`<p class="muted">ซื้อจริง ${money(i.paid)}</p>`:''}
-   ${i.note?`<p class="muted">หมายเหตุจากผู้รับฝาก: ${esc(i.note)}</p>`:''}
+   ${i.paid?`<p class="muted">จ่ายจริง ${money(i.paid)}</p>`:''}
+   ${i.note?`<p class="muted">ข้อความจากคนช็อปให้: ${esc(i.note)}</p>`:''}
    <ul class="timeline">${(i.log||[]).map(l=>`<li>${STATUS[l.s]} · ${new Date(l.at).toLocaleString(LANG==='en'?'en-US':'th-TH',LANG==='en'?{month:'short',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}:{dateStyle:'short',timeStyle:'short'})}</li>`).join('')}</ul>
    ${isShopper&&!off&&next?`<div style="margin-top:14px">${['requested','searching'].includes(i.status)?`<div class="field"><label>ราคาที่ซื้อจริง (${cur()}) — ใส่หรือไม่ก็ได้</label><input id="uPaid" inputmode="decimal" value="${i.paid||''}" oninput="approx('uPaid','aPaid')"><div class="approx" id="aPaid" style="margin:2px 0 0"></div></div>`:''}<button class="btn block" onclick="setStatus('${i.id}','${next}')">→ ${STATUS[next]}</button></div>`:''}
-   ${isShopper&&!off?`<div class="row" style="margin-top:8px"><button class="btn danger" onclick="setStatus('${i.id}','notfound')">หาไม่ได้</button><button class="btn ghost" onclick="setStatus('${i.id}','cancelled')">ยกเลิก</button></div>`:''}
-   ${isShopper&&off?`<button class="btn ghost block" style="margin-top:8px" onclick="setStatus('${i.id}','requested')">เปิดรายการใหม่</button>`:''}
+   ${isShopper&&!off?`<div class="row" style="margin-top:8px"><button class="btn danger" onclick="setStatus('${i.id}','notfound')">หาไม่เจอจริง ๆ</button><button class="btn ghost" onclick="setStatus('${i.id}','cancelled')">ยกเลิก</button></div>`:''}
+   ${isShopper&&off?`<button class="btn ghost block" style="margin-top:8px" onclick="setStatus('${i.id}','requested')">เอากลับมาใหม่</button>`:''}
    ${isShopper?`<button class="btn ghost block sm" style="margin-top:8px" onclick="editItemFee('${i.id}')">ปรับค่าฝากซื้อชิ้นนี้</button>`:''}
    ${isShopper&&(off||i.status==='delivered')?`<button class="btn danger block" style="margin-top:8px" onclick="delItem('${i.id}')">ลบรายการนี้ถาวร</button>`:''}
    ${!isShopper&&i.status==='requested'?`<button class="btn danger block" style="margin-top:14px" onclick="setStatus('${i.id}','cancelled')">ยกเลิกรายการนี้</button>`:''}
-   ${!isShopper&&i.status!=='requested'?`<p class="muted" style="margin-top:12px">${esc(S.trip.shopper)} รับเรื่องแล้ว ถ้าจะแก้ไข ทักไปบอกโดยตรงนะ</p>`:''}`);
+   ${!isShopper&&i.status!=='requested'?`<p class="muted" style="margin-top:12px">${esc(S.trip.shopper)} รับไว้แล้วนะ ถ้ามีอะไรเปลี่ยน ทักมาบอกได้เลย</p>`:''}`);
 }
 let ovType='perItem';
 function editItemFee(id){const i=S.items.find(x=>x.id===id);const o=i.feeOverride||{};ovType=o.type||'perItem';
@@ -937,7 +1174,7 @@ async function setStatus(id,s){
   const patch={status:s,log:[...(i.log||[]),{s,at:Date.now()}]};
   const p=$('#uPaid');if(p&&p.value)patch.paid=+p.value;
   await store.updateItem(S.tripId,id,patch);closeSheet();
-  toast(s==='delivered'?'ถึงมือแล้ว!':'อัปเดตเป็น "'+STATUS[s]+'"');
+  toast(s==='delivered'?'ส่งถึงมือแล้ว!':'อัปเดตเป็น "'+STATUS[s]+'"');
 }
 
 /* ---------- 8. settings ---------- */
@@ -945,10 +1182,10 @@ function openSettings(){
   const th=document.documentElement.dataset.theme;const shopper=!S.trip||S.role==='shopper';
   sheet(`<h2>ตั้งค่า</h2>
    ${shopper?`<div class="field"><label>ธีมสี</label><div class="chips"><button class="chip ${th==='tangerine'?'on':''}" onclick="setTheme('tangerine');openSettings()">Tangerine</button><button class="chip ${th==='matcha'?'on':''}" onclick="setTheme('matcha');openSettings()">Matcha</button></div></div>`:''}
-   ${S.trip&&S.role==='requester'?`<p class="muted">คุณกำลังดูในฐานะผู้ฝาก${S.user?'':' · ถ้าคุณคือผู้รับฝาก ให้เข้าสู่ระบบที่หน้าแรก'}</p>`:''}
+   ${S.trip&&S.role==='requester'?`<p class="muted">ตอนนี้คุณดูแบบผู้ฝาก${S.user?'':' · ถ้าคุณคือผู้รับฝาก ให้เข้าสู่ระบบที่หน้าแรก'}</p>`:''}
    ${S.trip&&S.role==='shopper'?`<div class="field"><label>สกุลเงิน ${cur()}${cur()!=='THB'?` · อัตรา 1 ${cur()} = THB`:''}</label>${cur()!=='THB'?`<div class="row"><input id="rateIn" inputmode="decimal" value="${S.trip.rate||''}"><button class="btn sm" style="flex:0" onclick="saveRate()">บันทึก</button></div>`:''}</div><a class="btn ghost block" href="?t=${S.tripId}&r=1">ดูหน้าแบบผู้ฝาก</a>`:''}
    <a class="btn ghost block" style="margin-top:8px" href="./">หน้าแรก</a>
-   <div class="ver">Toast v${VERSION} · ${store.online?'เชื่อมต่อ Firebase':'โหมดทดลองในเครื่อง'}</div>`);
+   <div class="ver">Toast v${VERSION} · ${store.online?'ออนไลน์':'โหมดทดลองในเครื่อง'}</div>`);
 }
 async function saveRate(){const r=+$('#rateIn').value;if(!r)return toast('ใส่อัตราเป็นตัวเลข');await store.updateTrip(S.tripId,{rate:r});S.trip.rate=r;closeSheet();render();toast('บันทึกอัตราแล้ว')}
 function setTheme(t){document.documentElement.dataset.theme=t;LS('toast:theme',t);applyMode()}
