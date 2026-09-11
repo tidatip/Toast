@@ -28,8 +28,9 @@
 .cover h1{font-size:44px;color:#4A3417;text-shadow:0 1px 0 rgba(255,255,255,.6)}
 .cover p{color:#6B5230;margin-top:2px}
 .cover .btn{width:min(320px,100%);min-height:50px;font-size:17px;box-shadow:0 6px 18px rgba(74,52,23,.25)}
-.hero{text-align:center;padding:8px 0 2px}
-.hero img{height:150px;width:auto;display:block;margin:0 auto -6px}
+.hero{text-align:center;padding:34vh 0 2px}
+.hero img{height:132px;width:auto;display:block;margin:0 auto -4px}
+.login main{padding-top:0}
 .authcard{min-height:296px;display:flex;flex-direction:column;justify-content:center}
 .authcard .seg{margin-bottom:auto}
 .authcard .btn.block{margin-top:auto}
@@ -239,7 +240,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='4.1';
+const VERSION='4.2';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -253,7 +254,7 @@ const STATUS={requested:'รับฝาก',searching:'กำลังตาม
 const FLOW=['requested','searching','found','packed','delivered'];
 const CATS=['ของกิน','เครื่องสำอาง','เสื้อผ้า','ของใช้','ยา/วิตามิน'];
 const ICON='icon-192.png';
-const HERO='toast-hero.jpg';
+const HERO='toast-hero.png';
 const IC={
  search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
  camera:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
@@ -413,7 +414,7 @@ function authMsg(e){return AUTH_ERR[e.code]||('ผิดพลาด: '+(e.code|
 function currentUser(){ if(AUTH)return AUTH.currentUser; const u=LS('toast:localUser');return u; }
 async function boot(){
   applyMode();
-  if(!S.tripId&&!LS('toast:coverSeen')&&!DEMO){await showCover();}
+  if(!S.tripId&&!DEMO){await showCover();}
   if(DEMO){S.user={uid:'demo',email:'demo@toast.app',displayName:LS('toast:demoName')||'Tidatip'};}
   else{
     const last=LS('toast:lastUser');
@@ -444,7 +445,7 @@ async function boot(){
   S.unsub=store.watchItems(S.tripId,items=>{S.items=items;render()});
   render();
 }
-function showCover(){return new Promise(res=>{const d=document.createElement('div');d.className='cover';d.innerHTML=`<div style="text-align:center"><h1>Toast</h1><p>${tr('หิ้วของกลับมาให้ถึงมือ')}</p></div><button class="btn">${tr('เริ่มกันเลย')}</button>`;document.body.appendChild(d);d.querySelector('button').onclick=()=>{LS('toast:coverSeen',1);d.remove();res()}})}
+function showCover(){return new Promise(res=>{const d=document.createElement('div');d.className='cover';d.innerHTML=`<div style="text-align:center"><h1>Toast</h1><p>${tr('หิ้วของกลับมาให้ถึงมือ')}</p></div><button class="btn">${tr('เริ่มกันเลย')}</button>`;document.body.appendChild(d);d.querySelector('button').onclick=()=>{d.remove();res()}})}
 async function doAuth(mode){
   if(!DEMO){const ok=await fbReady;if(!ok){toast('โหลด Firebase ไม่ได้ ลองใหม่อีกที');return}}
   const uname=$('#aUser').value.trim().toLowerCase(),pw=$('#aPw').value;
@@ -503,6 +504,7 @@ async function renderLanding(err){
   if(!S.user){ document.body.classList.add('login'); shell(`<div class="hero"><img src="${HERO}" alt=""><h1>Toast</h1><p class="muted">หิ้วของกลับมาให้ถึงมือ</p></div>${err?`<div class="card" style="border-color:#FCA5A5">${esc(err)}</div>`:''}`+authCard()); return; }
   const ck='toast:cache:'+S.user.uid;
   if(myTripsCache===null){
+    if(!DEMO&&S.user&&!LS('toast:cleaned4')){LS('toast:cleaned4',1);try{const all=await store.allMine(S.user.uid);for(const t of all){if(t.demo)await store.deleteTrip(t.id);}const rec=(LS('toast:recent')||[]).filter(r=>!all.some(t=>t.id===r.id));LS('toast:recent',rec);if(DB){try{const s=await DB.collection('users').doc(S.user.uid).collection('requests').get();for(const d of s.docs)await d.ref.delete();}catch(e){}}}catch(e){}}
     const c=LS(ck);
     if(c&&c.v===2){myTripsCache=c.trips;itemCounts=c.counts||{};S.friends=c.friends||[];S.myReq=c.myReq||[];refreshHome(true);}
     else{await refreshHome(false);}
@@ -522,7 +524,6 @@ async function refreshHome(background){
   try{
     if(!DEMO){const ok=await fbReady;if(!ok&&!LS('toast:localUser'))return;}
     if(DEMO&&(LS('toast:demoVer')!==6)){if(LSOK)Object.keys(localStorage).filter(k=>/^toast:(trip|items|recent|friends|cache)/.test(k)).forEach(k=>localStorage.removeItem(k));await seedDemo(true);}
-    else if(!DEMO&&!LS('toast:seeded:'+S.user.uid)){const mt=await store.myTrips(S.user.uid);if(!mt.length){LS('toast:seeded:'+S.user.uid,1);await seedDemo(true);}}
     const [friends,inv,trips]=await Promise.all([store.myFriends(S.user.uid),store.invitedBags(S.user.uid),store.myTrips(S.user.uid)]);
     const rec=LS('toast:recent')||[];
     const counts={};await Promise.all(trips.map(async t=>{counts[t.id]=await store.getItems(t.id);}));
@@ -622,7 +623,7 @@ function profileView(){
   const pal=(k,l,c1,c2,c3)=>`<button class="palbtn ${th===k?'on':''}" onclick="setThemeP('${k}')"><span class="dots"><i style="background:${c1}"></i><i style="background:${c2}"></i><i style="background:${c3}"></i></span>${l}</button>`;
   return `<h1 style="font-size:32px;color:var(--accent-deep);margin:6px 0 14px">โปรไฟล์</h1>
    <div class="card" style="display:flex;gap:16px;align-items:center">
-     <button type="button" onclick="document.getElementById('avIn').click()" style="border:0;padding:0;width:84px;height:84px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;color:var(--accent-deep);overflow:hidden;position:relative;flex:none;cursor:pointer">${av?`<img src="${av}" alt="" style="width:100%;height:100%;object-fit:cover">`:ic('user',38)}<span style="position:absolute;right:2px;bottom:2px;width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:var(--on-accent)">${ic('camera',15)}</span></button>
+     <button type="button" onclick="document.getElementById('avIn').click()" style="border:0;padding:0;width:84px;height:84px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;color:var(--accent-deep);position:relative;flex:none;cursor:pointer">${av?`<img src="${av}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:ic('user',38)}<span style="position:absolute;right:-2px;bottom:-2px;width:30px;height:30px;border-radius:50%;background:var(--accent);border:2px solid var(--card);display:flex;align-items:center;justify-content:center;color:var(--on-accent)">${ic('camera',15)}</span></button>
      <input id="avIn" class="vh" type="file" accept="image/*">
      <div style="flex:1;min-width:0"><div class="field" style="margin:0"><label>ชื่อที่เพื่อนจะเห็น</label><input id="nmIn" value="${esc(S.user.displayName||'')}" onchange="saveName()"></div><div class="muted" style="font-size:12px;margin-top:4px">ไอดี @${esc(uname)} · ให้เพื่อนใช้เพิ่มคุณ</div></div>
    </div>
