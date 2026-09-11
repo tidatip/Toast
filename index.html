@@ -105,6 +105,11 @@ main.hasfab{padding-bottom:150px}
 .seg{display:flex;background:rgba(255,255,255,.6);border:1.5px solid var(--line);border-radius:999px;padding:3px;margin-bottom:10px}
 .seg button{flex:1;padding:7px;border-radius:999px;font-weight:500;color:var(--ink-2)}
 .seg button.on{background:var(--ink);color:#fff}
+.catrow{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.catrow:first-child{border-top:0}
+.catrow .cname{flex:1;min-width:0}
+.catrow .ctype{font-size:12.5px;color:var(--accent-deep);padding:4px 8px;border-radius:8px;background:var(--accent-soft);white-space:nowrap}
+.catrow .cval{width:78px;height:34px;padding:4px 10px;text-align:right;border:1.5px solid var(--line);border-radius:10px;background:var(--card)}
 .catpick{display:flex;gap:5px;flex-wrap:nowrap}.catpick .chip{white-space:nowrap;padding:5px 8px;font-size:13px;min-height:32px;flex:1;text-align:center}
 .detail-img{display:block;margin:0 auto 12px;max-width:100%;max-height:260px;object-fit:contain;border-radius:16px}
 :root[data-theme=matcha]{
@@ -240,7 +245,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='4.4';
+const VERSION='4.5';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -252,7 +257,8 @@ const FIREBASE_CONFIG={apiKey:"...",authDomain:"toast-xxxx.firebaseapp.com",proj
 /* ---------- 2. constants ---------- */
 const STATUS={requested:'รับฝาก',searching:'กำลังตามหา',found:'เจอแล้ว',packed:'ลงกระเป๋าแล้ว',delivered:'ถึงมือแล้ว',cancelled:'ยกเลิก',notfound:'หาไม่ได้'};
 const FLOW=['requested','searching','found','packed','delivered'];
-const CATS=['ของกิน','เครื่องสำอาง','เสื้อผ้า','ของใช้','ยา/วิตามิน'];
+const CATS_DEFAULT=['ของกิน','เครื่องสำอาง','เสื้อผ้า','ของใช้','ยา/วิตามิน'];
+const cats=t=>((t||S.trip||{}).cats)||CATS_DEFAULT;
 const ICON='icon-192.png';
 const HERO='toast-hero.png';
 const IC={
@@ -353,7 +359,7 @@ const EN=[
 ["ดูมุมของเพื่อน","See what friends see"],["ดูหน้าแบบผู้ฝาก","See what friends see"],["หน้าแรก","Home"],["ตั้งค่า","Settings"],["แก้ไข","Edit"],["กลับ","Back"],["เสร็จ","Done"],["เลือก","Select"],["ลบออกจากรายการแล้ว","Removed from your list"],["ลบแล้ว","Removed"],["ลบไม่ได้","Couldn't delete"],["ต้องอัปเดต Rules ก่อน","update the rules first"],["ลบ","Remove"],["เพิ่ม","Add"],["ไป","Go"],
 ["ได้ของแล้ว","Delivered"],["ได้ลิงค์จากเพื่อนมา?","Got a link?"],["วางลิงค์","Paste link"],["ส่งแล้ว","Delivered"],["ส่งให้แล้ว","Shared"],["ใส่ตำแหน่งปัจจุบันแล้ว","Pinned your current spot"],["ขอตำแหน่งไม่ได้","Couldn't get your location"],["กำลังเปิดกระเป๋า…","Opening bag…"],
 ["โหมดตัวอย่าง","Demo mode"],["โหมดทดลองในเครื่อง","Local test mode"],["เชื่อมต่อ Firebase","Online"],["ใส่ข้อมูลจำลองแล้ว","Demo data added"],["เร็ว ๆ นี้","coming soon"],
-["กม.","km"],["คน","people"],["วัน","days"],["ฉัน","Me"],["แล้ว",""],["ลบรายการที่จบแล้วทั้งหมด","Delete all finished items"],["ล้างรายการที่จบแล้ว","Clear finished items"],["ลบรายการนี้ถาวร?","Delete this item permanently?"],["ลบรายการนี้ถาวร","Delete permanently"],["ไม่มีรายการที่จบแล้ว","No finished items"],["เริ่มกันเลย","Let's go"],["ไทย","ไทย"]
+["กม.","km"],["คน","people"],["วัน","days"],["ฉัน","Me"],["แล้ว",""],["หมวดนี้คิดค่าฝากซื้อตามน้ำหนัก ใส่น้ำหนักด้วยนะ","This category charges by weight — add the weight"],["คิดเหมือนกันหมด","Same for all"],["แยกตามหมวด","By category"],["+ เพิ่มหมวดสินค้า","+ Add a category"],["เพิ่มหมวดสินค้า","Add a category"],["ชื่อหมวด","Category name"],["เช่น รองเท้า","e.g. Shoes"],["มีหมวดนี้แล้ว","That category already exists"],["ปรับค่าฝากซื้อชิ้นนี้","Set fee for this item"],["ค่าฝากซื้อชิ้นนี้","Fee for this item"],["ปกติคิด","Normally"],["ตั้งเฉพาะชิ้นนี้ได้","set a different fee just for this one"],["เหตุผล (ให้เพื่อนเห็น)","Reason (visible to your friend)"],["เช่น ต้องตามหาหลายสาขา","e.g. Need to check several branches"],["ใช้ค่าปกติของหมวด","Use the category default"],["กลับไปใช้ค่าปกติแล้ว","Back to the default"],["ลบรายการที่จบแล้วทั้งหมด","Delete all finished items"],["ล้างรายการที่จบแล้ว","Clear finished items"],["ลบรายการนี้ถาวร?","Delete this item permanently?"],["ลบรายการนี้ถาวร","Delete permanently"],["ไม่มีรายการที่จบแล้ว","No finished items"],["เริ่มกันเลย","Let's go"],["ไทย","ไทย"]
 ];
 const EN_MAP=EN.filter(x=>x[0]).sort((a,b)=>b[0].length-a[0].length);
 function tr(s){if(LANG!=='en'||typeof s!=='string')return s;let out=s;for(const [th,en] of EN_MAP){if(out.includes(th))out=out.split(th).join(en);}return out;}
@@ -596,26 +602,40 @@ function openCreate(){
   rateForCur();
 }
 async function rateForCur(){const c=$('#tCur').value;$('#rateLbl').textContent=c;const r=await fetchRate(c);if($('#tRate')&&$('#tCur')&&$('#tCur').value===c)$('#tRate').value=r?(c==='THB'?'1':r.toFixed(4)):''}
+let feeMode='flat',catFees={},catList=[];
 function openEdit(){
-  const t=S.trip;feeType=(t.fee&&t.fee.type)||'none';
+  const t=S.trip;feeType=(t.fee&&t.fee.type)||'none';feeMode=t.feeMode==='cat'?'cat':'flat';catList=[...cats(t)];catFees=Object.assign({},t.catFees||{});
   sheet(`<h2>แก้ไขกระเป๋า</h2>
    <div class="field"><label>ปลายทาง</label><input id="eName" value="${esc(t.name)}"></div>
    <div class="row"><div class="field"><label>วันรับของ</label><input id="eRecv" type="date" value="${t.recv||''}"></div><div class="field"><label>ปิดรับฝาก</label><input id="eClose" type="date" value="${t.close||''}"></div></div>
    <div class="field"><label>เรต 1 ${cur()} = ? THB</label><input id="eRate" inputmode="decimal" value="${t.rate||''}"></div>
    <h3 style="margin:6px 0 8px">ค่าฝากซื้อ</h3>
-   <div class="seg3" id="feePick">${FEE_TYPES.map(([k,l])=>`<button type="button" class="${feeType===k?'on':''}" onclick="feeType='${k}';pickCat(this);feeUI()">${l}</button>`).join('')}</div>
-   <div class="field" id="feeVal"><label id="feeLbl"></label><input id="tFee" inputmode="decimal" value="${(t.fee&&t.fee.value)||''}" placeholder="เช่น 50"></div>
+   <div class="seg3" style="margin-bottom:10px"><button type="button" class="${feeMode==='flat'?'on':''}" onclick="feeMode='flat';feeModeUI()">คิดเหมือนกันหมด</button><button type="button" class="${feeMode==='cat'?'on':''}" onclick="feeMode='cat';feeModeUI()">แยกตามหมวด</button></div>
+   <div id="flatBox">
+     <div class="seg3" id="feePick">${FEE_TYPES.map(([k,l])=>`<button type="button" class="${feeType===k?'on':''}" onclick="feeType='${k}';pickCat(this);feeUI()">${l}</button>`).join('')}</div>
+     <div class="field" id="feeVal"><label id="feeLbl"></label><input id="tFee" inputmode="decimal" value="${(t.fee&&t.fee.value)||''}" placeholder="เช่น 50"></div>
+   </div>
+   <div id="catBox" class="hidden"><div id="catRows"></div><button type="button" class="btn ghost block sm" style="margin:8px 0 12px" onclick="addCat()">+ เพิ่มหมวดสินค้า</button></div>
    <div class="field"><label>ของเกินราคานี้ขอมัดจำก่อน (THB)</label><input id="eDeposit" inputmode="decimal" value="${t.deposit||''}" placeholder="เว้นว่าง = ไม่ต้องมัดจำ"></div>
    <div class="field"><label>รายละเอียดฝากซื้อ (ข้อความถึงเพื่อน)</label><textarea id="eNote" placeholder="เช่น ของเหลวไม่รับนะ · ของหนักคิดเพิ่ม">${esc(t.note||'')}</textarea></div>
    <button class="btn block" onclick="saveEdit()">บันทึก</button>
    <a class="btn ghost block" style="margin-top:8px" href="?t=${S.tripId}&r=1">ดูมุมของเพื่อน</a>`);
-  feeUI();
+  feeUI();feeModeUI();
 }
-async function saveEdit(){const name=$('#eName').value.trim();if(!name)return toast('ใส่ปลายทางก่อนนะ');const patch={name,recv:$('#eRecv').value||null,close:$('#eClose').value||null,rate:+$('#eRate').value||S.trip.rate||1,fee:{type:feeType,value:feeType==='none'?0:(+$('#tFee').value||0)},deposit:+$('#eDeposit').value||null,note:$('#eNote').value.trim()};
+function feeModeUI(){$('#flatBox').classList.toggle('hidden',feeMode!=='flat');$('#catBox').classList.toggle('hidden',feeMode!=='cat');document.querySelectorAll('.seg3')[0].querySelectorAll('button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(feeMode==='flat')));if(feeMode==='cat')drawCatRows()}
+function drawCatRows(){const el=$('#catRows');el.innerHTML=catList.map((c,i)=>{const f=catFees[c]||{type:'none',value:''};return `<div class="catrow"><span class="cname">${esc(c)}</span><button type="button" class="ctype" onclick="cycleCat(${i})">${FEE_TYPES.find(x=>x[0]===(f.type||'none'))[1]}</button><input class="cval" inputmode="decimal" value="${f.value||''}" ${f.type==='none'||!f.type?'disabled placeholder="—"':''} oninput="setCatVal(${i},this.value)"></div>`}).join('')}
+function cycleCat(i){const c=catList[i];const order=FEE_TYPES.map(x=>x[0]);const cur=(catFees[c]&&catFees[c].type)||'none';const nx=order[(order.indexOf(cur)+1)%order.length];catFees[c]=Object.assign({},catFees[c],{type:nx});if(nx==='none')catFees[c].value=0;drawCatRows()}
+function setCatVal(i,v){const c=catList[i];catFees[c]=Object.assign({type:'perItem'},catFees[c],{value:+v||0})}
+function addCat(){sheet(`<h2>เพิ่มหมวดสินค้า</h2><div class="field"><label>ชื่อหมวด</label><input id="newCatName" placeholder="เช่น รองเท้า"></div><button class="btn block" onclick="doAddCat()">เพิ่ม</button>`);setTimeout(()=>$('#newCatName')&&$('#newCatName').focus(),50)}
+function doAddCat(){const n=$('#newCatName').value.trim();if(!n)return;if(catList.includes(n))return toast('มีหมวดนี้แล้ว');catList.push(n);catFees[n]={type:'perItem',value:0};closeSheet();openEdit();}
+async function saveEdit(){const name=$('#eName').value.trim();if(!name)return toast('ใส่ปลายทางก่อนนะ');const patch={name,recv:$('#eRecv').value||null,close:$('#eClose').value||null,rate:+$('#eRate').value||S.trip.rate||1,feeMode,cats:catList,catFees,fee:{type:feeType,value:feeType==='none'?0:(+($('#tFee')||{}).value||0)},deposit:+$('#eDeposit').value||null,note:$('#eNote').value.trim()};
   try{await store.updateTrip(S.tripId,patch);Object.assign(S.trip,patch);S.user&&LS('toast:cache:'+S.user.uid,null);closeSheet();toast('บันทึกแล้ว');render()}catch(e){toast('บันทึกไม่ได้: '+(e.code||e.message))}}
 function feeUI(){const t=FEE_TYPES.find(x=>x[0]===feeType);$('#feeVal').classList.toggle('hidden',feeType==='none');$('#feeLbl').textContent=t[2]}
-function feeText(t){const f=t.fee||{type:'none'};if(f.type==='none'||!f.value)return 'ไม่คิดค่าฝากซื้อ';return f.type==='perItem'?`ค่าฝากซื้อ THB ${fmt(f.value)} ต่อชิ้น`:f.type==='percent'?`ค่าฝากซื้อ ${f.value}% ของราคาของ`:`ค่าฝากซื้อ THB ${fmt(f.value)} ต่อกก.`}
-function feeFor(i,t){t=t||S.trip;const f=(t&&t.fee)||{type:'none'};const q=Number(i.qty)||1;const price=Number(i.paid||i.price)||0;const thb=price*(t.rate||1);
+function oneFeeText(f){if(!f||f.type==='none'||!f.value)return 'ไม่คิดเงิน';return f.type==='perItem'?`THB ${fmt(f.value)} ต่อชิ้น`:f.type==='percent'?`${f.value}% ของราคาของ`:`THB ${fmt(f.value)} ต่อกก.`}
+function feeText(t){t=t||S.trip;if(t.feeMode==='cat'&&t.catFees){const rows=cats(t).map(c=>`${c} ${oneFeeText(t.catFees[c])}`);return 'ค่าฝากซื้อ · '+rows.join(' · ')}
+  const f=t.fee||{type:'none'};if(f.type==='none'||!f.value)return 'ไม่คิดค่าฝากซื้อ';return 'ค่าฝากซื้อ '+oneFeeText(f)}
+function feeRule(i,t){t=t||S.trip;if(i&&i.feeOverride&&i.feeOverride.type)return i.feeOverride;if(t.feeMode==='cat'&&t.catFees)return t.catFees[i&&i.cat]||{type:'none'};return t.fee||{type:'none'}}
+function feeFor(i,t){t=t||S.trip;const f=feeRule(i,t);const q=Number(i.qty)||1;const price=Number(i.paid||i.price)||0;const thb=price*(t.rate||1);
   if(f.type==='perItem')return (Number(f.value)||0)*q;if(f.type==='percent')return thb*q*(Number(f.value)||0)/100;if(f.type==='perKg')return (Number(f.value)||0)*(Number(i.weight)||0);return 0}
 function goodsThb(i,t){t=t||S.trip;return (Number(i.paid||i.price)||0)*(Number(i.qty)||1)*(t.rate||1)}
 function profileView(){
@@ -817,16 +837,16 @@ function closeSheet(){$('#sheetRoot').innerHTML=''}
 
 let photoData='',subPhotoData='';
 function openItemForm(){
-  photoData='';subPhotoData='';
+  photoData='';subPhotoData='';setTimeout(wUI,30);
   const asShopper=S.role==='shopper';
   sheet(`<h2>ฝากซื้อของ</h2>
    ${asShopper?`<div class="field"><label>ชื่อผู้ฝาก</label><input id="fWho" placeholder="เพื่อนคนไหน"></div>`:''}
    <div class="field"><label>รูปสินค้า</label><div class="photobox" id="fBox" onclick="document.getElementById('fFile').click()"><img id="fImg" alt=""><span class="ph">${ic('camera',28)}เพิ่มรูปสินค้า</span></div><input id="fFile" class="vh" type="file" accept="image/*" onchange="pickPhoto(this,'fImg','main')"></div>
    <div class="field"><label>ชื่อสินค้า</label><input id="fName" placeholder="เช่น Kit Kat รสชาเขียว"></div>
    <div class="row"><div class="field"><label>ราคาที่เห็น (${cur()})</label><input id="fPrice" inputmode="decimal" oninput="approx('fPrice','aPrice')"><div class="approx" id="aPrice" style="margin:2px 0 0"></div></div><div class="field"><label>จำนวน</label><input id="fQty" inputmode="numeric" value="1"></div></div>
-   ${S.trip&&S.trip.fee&&S.trip.fee.type==='perKg'?`<div class="field"><label>น้ำหนักโดยประมาณ (กก.)</label><input id="fWeight" inputmode="decimal" placeholder="เช่น 1.5"></div>`:''}
+   <div class="field hidden" id="wBox"><label>น้ำหนักโดยประมาณ (กก.)</label><input id="fWeight" inputmode="decimal" placeholder="เช่น 1.5"></div>
    <div class="field"><label>งบไม่เกิน (${cur()}) ถ้าราคาต่างจากที่เห็น</label><input id="fBudget" inputmode="decimal" placeholder="เว้นว่างได้" oninput="approx('fBudget','aBudget')"><div class="approx" id="aBudget" style="margin:2px 0 0"></div></div>
-   <div class="field"><label>ประเภท</label><div class="catpick" id="fCatPick">${CATS.map((c,i)=>`<button type="button" class="chip ${i===0?'on':''}" onclick="pickCat(this)">${c}</button>`).join('')}</div></div>
+   <div class="field"><label>ประเภท</label><div class="catpick" id="fCatPick">${cats().map((c,i)=>`<button type="button" class="chip ${i===0?'on':''}" onclick="pickCat(this)">${c}</button>`).join('')}</div></div>
    <div class="field"><label>รายละเอียด / จุดสังเกต</label><textarea id="fDetail" placeholder="สี ขนาด รุ่น ห้ามซื้อแบบไหน"></textarea></div>
    <div class="field"><label>ร้าน</label><input id="fShop" placeholder="ชื่อร้าน / สาขา"></div>
    <div class="field"><label>ตำแหน่งร้าน</label><div class="row"><input id="fLoc" placeholder="วางลิงค์ Google Maps"><button class="btn ghost sm" onclick="useHere()">ตรงนี้</button></div></div>
@@ -845,7 +865,8 @@ function openItemForm(){
    <button class="btn block" onclick="saveItem()">ฝากซื้อ</button>`);
 }
 function fbUI(v){$('#subBox').classList.toggle('hidden',v!=='substitute');$('#contactBox').classList.toggle('hidden',v!=='contact')}
-function pickCat(b){[...b.parentNode.children].forEach(x=>x.classList.remove('on'));b.classList.add('on')}
+function pickCat(b){[...b.parentNode.children].forEach(x=>x.classList.remove('on'));b.classList.add('on');wUI()}
+function wUI(){const box=$('#wBox');if(!box)return;const c=(($('#fCatPick .on')||{}).textContent)||cats()[0];const r=feeRule({cat:c},S.trip);box.classList.toggle('hidden',r.type!=='perKg')}
 function pickPhoto(inp,imgId,which){
   const f=inp.files[0];if(!f)return;const r=new FileReader();
   r.onload=()=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');const s=Math.min(1,720/Math.max(im.width,im.height));c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);const d=c.toDataURL('image/jpeg',.6);which==='main'?photoData=d:subPhotoData=d;$('#'+imgId).src=d;$('#'+imgId).parentNode.classList.add('has');};im.src=r.result;};
@@ -862,9 +883,11 @@ async function saveItem(){
   const name=$('#fName').value.trim();
   if(!who||!name){toast('ใส่ชื่อผู้ฝากและชื่อสินค้าก่อน');return}
   if(photoData.length>900000){toast('รูปใหญ่เกินไป ลองรูปอื่น');return}
+  const catSel=(($('#fCatPick .on')||{}).textContent)||cats()[0];
+  if(feeRule({cat:catSel},S.trip).type==='perKg'&&!(+($('#fWeight')||{}).value)){toast('หมวดนี้คิดค่าฝากซื้อตามน้ำหนัก ใส่น้ำหนักด้วยนะ');return}
   const loc=parseLoc($('#fLoc').value)||{};
   const fb=$('input[name=fb]:checked').value;const contact=$('#fContact').value.trim();if(contact)LS('toast:contact',contact);
-  const it={id:uid(8),requester:who,name,photo:photoData,price:+$('#fPrice').value||null,budget:+$('#fBudget').value||null,qty:+$('#fQty').value||1,weight:$('#fWeight')?(+$('#fWeight').value||null):null,cat:($('#fCatPick .on')||{}).textContent||CATS[0],detail:$('#fDetail').value.trim(),shop:$('#fShop').value.trim(),lat:loc.lat??null,lng:loc.lng??null,mapUrl:loc.mapUrl||'',fallback:fb,contact:contact||'',rid:S.role==='requester'?S.rid:'',requesterUid:(S.role==='requester'&&S.user)?S.user.uid:'',status:'requested',log:[{s:'requested',at:Date.now()}]};
+  const it={id:uid(8),requester:who,name,photo:photoData,price:+$('#fPrice').value||null,budget:+$('#fBudget').value||null,qty:+$('#fQty').value||1,weight:$('#fWeight')?(+$('#fWeight').value||null):null,cat:($('#fCatPick .on')||{}).textContent||cats()[0],detail:$('#fDetail').value.trim(),shop:$('#fShop').value.trim(),lat:loc.lat??null,lng:loc.lng??null,mapUrl:loc.mapUrl||'',fallback:fb,contact:contact||'',rid:S.role==='requester'?S.rid:'',requesterUid:(S.role==='requester'&&S.user)?S.user.uid:'',status:'requested',log:[{s:'requested',at:Date.now()}]};
   if(fb==='substitute')it.substitute={name:$('#sName').value.trim(),photo:subPhotoData,price:+$('#sPrice').value||null,qty:+$('#sQty').value||1,detail:$('#sDetail').value.trim(),shop:$('#sShop').value.trim()};
   await store.addItem(S.tripId,it);closeSheet();toast('ฝากแล้ว');
 }
@@ -883,7 +906,7 @@ function openItem(id){
      ${i.price?`<div>ราคาที่เห็น ${money(i.price)}${i.budget?`<br>งบไม่เกิน ${money(i.budget)}`:''}</div>`:''}
      ${i.detail?`<div style="margin-top:4px">${esc(i.detail)}</div>`:''}
      ${i.shop||i.mapUrl?`<div class="meta" style="margin-top:6px">${ic('pin',14)} ${esc(i.shop||'ร้าน')} ${i.mapUrl?`<a href="${esc(i.mapUrl)}" target="_blank" rel="noopener">เปิดแผนที่</a>`:''}</div>`:''}
-     <div class="muted" style="margin-top:6px">ถ้าหาไม่เจอ: ${FALLBACK[i.fallback]}${i.fallback==='contact'&&i.contact?` — <b>${esc(i.contact)}</b>`:''}</div>
+     ${i.feeOverride&&i.feeOverride.type?`<div class="muted" style="margin-top:6px">ค่าฝากซื้อชิ้นนี้ ${oneFeeText(i.feeOverride)}${i.feeOverride.note?' · '+esc(i.feeOverride.note):''}</div>`:''}<div class="muted" style="margin-top:6px">ถ้าหาไม่เจอ: ${FALLBACK[i.fallback]}${i.fallback==='contact'&&i.contact?` — <b>${esc(i.contact)}</b>`:''}</div>
    </div>
    ${sub}
    ${i.paid?`<p class="muted">ซื้อจริง ${money(i.paid)}</p>`:''}
@@ -892,10 +915,21 @@ function openItem(id){
    ${isShopper&&!off&&next?`<div style="margin-top:14px">${['requested','searching'].includes(i.status)?`<div class="field"><label>ราคาที่ซื้อจริง (${cur()}) — ใส่หรือไม่ก็ได้</label><input id="uPaid" inputmode="decimal" value="${i.paid||''}" oninput="approx('uPaid','aPaid')"><div class="approx" id="aPaid" style="margin:2px 0 0"></div></div>`:''}<button class="btn block" onclick="setStatus('${i.id}','${next}')">→ ${STATUS[next]}</button></div>`:''}
    ${isShopper&&!off?`<div class="row" style="margin-top:8px"><button class="btn danger" onclick="setStatus('${i.id}','notfound')">หาไม่ได้</button><button class="btn ghost" onclick="setStatus('${i.id}','cancelled')">ยกเลิก</button></div>`:''}
    ${isShopper&&off?`<button class="btn ghost block" style="margin-top:8px" onclick="setStatus('${i.id}','requested')">เปิดรายการใหม่</button>`:''}
+   ${isShopper?`<button class="btn ghost block sm" style="margin-top:8px" onclick="editItemFee('${i.id}')">ปรับค่าฝากซื้อชิ้นนี้</button>`:''}
    ${isShopper&&(off||i.status==='delivered')?`<button class="btn danger block" style="margin-top:8px" onclick="delItem('${i.id}')">ลบรายการนี้ถาวร</button>`:''}
    ${!isShopper&&i.status==='requested'?`<button class="btn danger block" style="margin-top:14px" onclick="setStatus('${i.id}','cancelled')">ยกเลิกรายการนี้</button>`:''}
    ${!isShopper&&i.status!=='requested'?`<p class="muted" style="margin-top:12px">${esc(S.trip.shopper)} รับเรื่องแล้ว ถ้าจะแก้ไข ทักไปบอกโดยตรงนะ</p>`:''}`);
 }
+let ovType='perItem';
+function editItemFee(id){const i=S.items.find(x=>x.id===id);const o=i.feeOverride||{};ovType=o.type||'perItem';
+  sheet(`<h2>ค่าฝากซื้อชิ้นนี้</h2><p class="muted">ปกติคิด ${oneFeeText(feeRule(Object.assign({},i,{feeOverride:null}),S.trip))} · ตั้งเฉพาะชิ้นนี้ได้</p>
+   <div class="seg3" id="ovPick" style="margin:10px 0">${FEE_TYPES.map(([k,l])=>`<button type="button" class="${ovType===k?'on':''}" onclick="ovType='${k}';pickCat(this)">${l}</button>`).join('')}</div>
+   <div class="field"><label>จำนวน</label><input id="ovVal" inputmode="decimal" value="${o.value||''}" placeholder="เช่น 300"></div>
+   <div class="field"><label>เหตุผล (ให้เพื่อนเห็น)</label><input id="ovNote" value="${esc(o.note||'')}" placeholder="เช่น ต้องตามหาหลายสาขา"></div>
+   <button class="btn block" onclick="saveItemFee('${id}')">บันทึก</button>
+   ${o.type?`<button class="btn ghost block sm" style="margin-top:8px" onclick="clearItemFee('${id}')">ใช้ค่าปกติของหมวด</button>`:''}`)}
+async function saveItemFee(id){const v=+$('#ovVal').value||0;const note=$('#ovNote').value.trim();await store.updateItem(S.tripId,id,{feeOverride:{type:ovType,value:v,note}});closeSheet();toast('บันทึกแล้ว')}
+async function clearItemFee(id){await store.updateItem(S.tripId,id,{feeOverride:null});closeSheet();toast('กลับไปใช้ค่าปกติแล้ว')}
 async function delItem(id){const i=S.items.find(x=>x.id===id);if(!confirm(tr('ลบรายการนี้ถาวร?')+' '+(i?i.name:'')))return;try{await store.deleteItem(S.tripId,id);closeSheet();toast('ลบแล้ว')}catch(e){toast('ลบไม่ได้: '+(e.code||e.message))}}
 async function clearDone(){const done=S.items.filter(i=>['cancelled','notfound','delivered'].includes(i.status));if(!done.length)return toast('ไม่มีรายการที่จบแล้ว');if(!confirm(tr('ลบรายการที่จบแล้วทั้งหมด')+' ('+done.length+')?'))return;try{for(const i of done)await store.deleteItem(S.tripId,i.id);toast('ลบแล้ว '+done.length+' รายการ')}catch(e){toast('ลบไม่ได้: '+(e.code||e.message))}}
 async function setStatus(id,s){
