@@ -239,7 +239,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='4.0';
+const VERSION='4.1';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -356,7 +356,7 @@ const EN=[
 ];
 const EN_MAP=EN.filter(x=>x[0]).sort((a,b)=>b[0].length-a[0].length);
 function tr(s){if(LANG!=='en'||typeof s!=='string')return s;let out=s;for(const [th,en] of EN_MAP){if(out.includes(th))out=out.split(th).join(en);}return out;}
-const DEMO=location.protocol!=='https:'||Q.get('demo')==='1'||/preview\.html$/.test(location.pathname)||typeof firebase==='undefined';
+const DEMO=location.protocol==='file:'||Q.get('demo')==='1'||/preview|requester/.test(location.pathname);
 let DB=null,AUTH=null;
 const loadScript=src=>new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s)});
 const fbReady=(FIREBASE_CONFIG&&!DEMO)?(async()=>{try{const B='https://www.gstatic.com/firebasejs/10.12.2/';await loadScript(B+'firebase-app-compat.js');await Promise.all([loadScript(B+'firebase-firestore-compat.js'),loadScript(B+'firebase-auth-compat.js')]);firebase.initializeApp(FIREBASE_CONFIG);DB=firebase.firestore();AUTH=firebase.auth();AUTH.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});try{DB.enablePersistence({synchronizeTabs:true}).catch(()=>{})}catch(e){}return true}catch(e){return false}})():Promise.resolve(false);
