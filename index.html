@@ -109,6 +109,12 @@ main.hasfab{padding-bottom:150px}
 .catrow:first-child{border-top:0}
 .catrow .cname{flex:1;min-width:0}
 .catrow .ctype{font-size:12.5px;color:var(--accent-deep);padding:4px 8px;border-radius:8px;background:var(--accent-soft);white-space:nowrap}
+.catrow .ctype.no{background:#FBE3E3;color:#B0483F}
+.catrow .cdel{width:26px;height:26px;border-radius:50%;color:var(--ink-2);font-size:18px;line-height:1;flex:none}
+.addcat{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:10px 12px;margin-top:10px}
+.addcat .t{font-weight:500;font-size:13.5px;margin-bottom:6px}
+.addcat input{flex:1;min-width:0;height:34px;padding:4px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--card)}
+.addcat .btn{height:34px;min-height:34px;padding:0 16px}
 .catrow .cval{width:78px;height:34px;padding:4px 10px;text-align:right;border:1.5px solid var(--line);border-radius:10px;background:var(--card)}
 .catpick{display:flex;gap:5px;flex-wrap:nowrap}.catpick .chip{white-space:nowrap;padding:5px 8px;font-size:13px;min-height:32px;flex:1;text-align:center}
 .detail-img{display:block;margin:0 auto 12px;max-width:100%;max-height:260px;object-fit:contain;border-radius:16px}
@@ -255,10 +261,11 @@ const FIREBASE_CONFIG={apiKey:"...",authDomain:"toast-xxxx.firebaseapp.com",proj
 */
 
 /* ---------- 2. constants ---------- */
-const STATUS={requested:'จดไว้แล้ว',searching:'กำลังตามหา',found:'เจอแล้ว!',packed:'อยู่ในกระเป๋าแล้ว',delivered:'ถึงมือแล้ว',cancelled:'ยกเลิก',notfound:'หาไม่เจอจริง ๆ'};
+const STATUS={requested:'จดไว้แล้ว',searching:'กำลังตามหา',found:'เจอแล้ว!',packed:'รอรับเลย',delivered:'ถึงมือแล้ว',cancelled:'ยกเลิก',notfound:'หาไม่เจอจริง ๆ'};
 const FLOW=['requested','searching','found','packed','delivered'];
 const CATS_DEFAULT=['ของกิน','เครื่องสำอาง','แฟชั่น','ของใช้','ยา/วิตามิน'];
 const cats=t=>((t||S.trip||{}).cats)||CATS_DEFAULT;
+const catsOpen=t=>{t=t||S.trip||{};const cf=(t.feeMode==='cat'&&t.catFees)||{};return cats(t).filter(c=>(cf[c]||{}).type!=='blocked')};
 const ICON='icon-192.png';
 const HERO='toast-hero.png';
 const IC={
@@ -298,308 +305,308 @@ async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncod
 const Q=new URLSearchParams(location.search);
 const REQPREVIEW=/requester/.test(location.pathname);
 const EN=[
-["ล็อกเรตนี้ทั้งกระเป๋า เริ่มจากเรตวันนี้ แก้ได้ภายหลัง<br>ค่าฝากซื้อและรายละเอียดตั้งได้ที่ไอคอนดินสอหลังสร้าง","Locked for this bag — starts at today's rate, editable<br>fee and details can be set later via the pencil icon"],
-["ลิงก์เดียวให้ทั้งกลุ่ม ฝากได้ทันที ไม่ต้องเป็นสมาชิก<br>ทุกคนกดลิงค์เดียวกัน แต่เห็นแค่ของตัวเอง","Drop it in the group chat — friends add their picks right away, no sign-up<br>same link for everyone, but each sees only their own"],
-["ลิงค์เฉพาะบุคคล","Send it directly — they’ll only see their own items. More private, less mix-up."],
 ["ยังอยู่ในโหมดทดลองในเครื่อง กระเป๋าเห็นได้เฉพาะเบราว์เซอร์ที่สร้าง — ต้องเชื่อม Firebase ก่อนจึงจะแชร์ลิงค์ให้เพื่อนได้","Still in local test mode — bags are only visible in the browser that created them"],
-["ไม่พบกระเป๋านี้ ลิงค์อาจผิดหรือถูกลบไปแล้ว","Can't find this bag — the link may be wrong or the bag may have been deleted"],
+["ล็อกเรตนี้ทั้งกระเป๋า เริ่มจากเรตวันนี้ แก้ได้ภายหลัง\nค่าฝากซื้อและรายละเอียดตั้งได้ที่ไอคอนดินสอหลังสร้าง","Locked for this bag — starts at today's rate, editable\nfee and details can be set later via the pencil icon"],
+["ลิงก์เดียวให้ทั้งกลุ่ม ฝากได้ทันที ไม่ต้องเป็นสมาชิก\nทุกคนกดลิงค์เดียวกัน แต่เห็นแค่ของตัวเอง","Drop it in the group chat — friends add their picks right away, no sign-up\nsame link for everyone, but each sees only their own"],
 ["เพื่อความปลอดภัย ออกจากระบบแล้วเข้าใหม่ก่อนเปลี่ยนรหัส","For safety, log out and back in before changing it"],
+["ยังหาโลเคชันไม่เจอ ลองเปิดสิทธิ์ตำแหน่งในเบราว์เซอร์นะ","Couldn't get your location — allow location access in your browser"],
 ["กด + แล้วใส่ ID เพื่อน (ยูเซอร์เนมที่ใช้ล็อกอิน)","Tap + and enter a friend's ID (their login username)"],
-["ไอดีเพื่อน (ยูเซอร์เนมที่ใช้ล็อกอิน)","Friend's ID (their login username)"],
-["กดลิงค์ที่เพื่อนส่งมา หรือวางลิงค์ด้านล่าง","Tap a friend's link, or paste one below"],
+["หมวดนี้คิดค่าฝากซื้อตามน้ำหนัก ใส่น้ำหนักด้วยนะ","This category charges by weight — add the weight"],
+["ชื่อผู้ใช้ 3-20 ตัว ใช้ได้เฉพาะ a-z 0-9 . _ -","Username 3–20 characters, a-z 0-9 . _ - only"],
 ["ส่งลิงค์ให้เพื่อน หรือจะใส่ให้เพื่อนเองก็ได้","Share the link, or add something for a friend"],
 ["รับไว้แล้วนะ ถ้ามีอะไรเปลี่ยน ทักมาบอกได้เลย","has your list — message them to change anything"],
 ["ถ้าคุณคือผู้รับฝาก ให้เข้าสู่ระบบที่หน้าแรก","If this is your bag, log in from the home screen"],
-["ยังหาโลเคชันไม่เจอ ลองเปิดสิทธิ์ตำแหน่งในเบราว์เซอร์นะ","Couldn't get your location — allow location access in your browser"],
-["ชื่อผู้ใช้ 3-20 ตัว ใช้ได้เฉพาะ a-z 0-9 . _ -","Username 3–20 characters, a-z 0-9 . _ - only"],
-["ชื่อผู้ใช้ใช้ได้เฉพาะ a-z 0-9 . _ -","Username may only use a-z 0-9 . _ -"],
-["ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง","That username or password isn't right"],
-["ติดต่อฉันได้ที่ (LINE / โทร) — ไม่บังคับ","Reach me at (LINE / phone) — optional"],
-["ยอดเกินนี้ ขอวางมัดจำไว้หน่อย (THB)","Ask for a deposit above (THB)"],
-["ข้อความถึงเพื่อน","A note for your friends"],
-["เช่น ของเหลวไม่รับนะ · ของหนักคิดเพิ่ม","e.g. No liquids · Heavy items cost extra"],
-["ปิดกระเป๋าแล้ว ทัก","The bag's closed — message"],
-["ตรงได้เลยถ้ามีอะไรด่วน","directly if something's urgent"],
-["ชิ้นแรก เริ่มตรงนี้","Tap above and start with one thing"],
-["ค้นหากระเป๋า ที่หมาย หรือของที่ฝาก","Search bags, destinations, or items"],
-["เลื่อนซ้ายเพื่อลบรายการ","Swipe left to remove"],
-["เปิดใน Safari/Chrome แล้ว","Open in Safari/Chrome"],
-["เพิ่มไปยังหน้าจอโฮม","Add to Home Screen"],
-["เพื่อใช้เป็นแอพ · ไม่จำเป็นต้องมีบัญชี","to use it like an app · friends don't need an account"],
-["โหมดตัวอย่าง ออกจากระบบไม่ได้","Demo mode — can't log out"],
-["โหลด Firebase ไม่ได้ ลองใหม่อีกที","Couldn't load Firebase, try again"],
-["ใส่ชื่อและของที่อยากได้เลย","Add the requester and item name first"],
-["รูปใหญ่ไปนิด ลองเลือกรูปอื่นนะ","Photo is too large — try another one"],
-["รหัสผ่านอย่างน้อย 6 ตัว","Password must be at least 6 characters"],
-["ลองผิดหลายครั้ง รอสักครู่","Too many tries — take a short break"],
-["ชื่อผู้ใช้นี้มีคนใช้แล้ว","That username is taken"],
-["ไม่พบชื่อผู้ใช้นี้","Can't find that username"],
-["กรอกชื่อผู้ใช้และรหัสผ่าน","Enter your username and password"],
-["รายละเอียดเพิ่มเติม","Details / notes"],
+["ไม่พบกระเป๋านี้ ลิงค์อาจผิดหรือถูกลบไปแล้ว","Can't find this bag — the link may be wrong or the bag may have been deleted"],
+["กดลิงค์ที่เพื่อนส่งมา หรือวางลิงค์ด้านล่าง","Tap a friend's link, or paste one below"],
 ["สี ไซซ์ รุ่น หรือรายละเอียดที่อยากกำชับ","Colour, size, model, or what to avoid"],
-["เช่น Kit Kat รสชาเขียว","e.g. Matcha Kit Kat"],
+["เช่น ของเหลวไม่รับนะ · ของหนักคิดเพิ่ม","e.g. No liquids · Heavy items cost extra"],
+["เพื่อใช้เป็นแอพ · ไม่จำเป็นต้องมีบัญชี","to use it like an app · friends don't need an account"],
+["ไอดีเพื่อน (ยูเซอร์เนมที่ใช้ล็อกอิน)","Friend's ID (their login username)"],
+["ชื่อผู้ใช้ใช้ได้เฉพาะ a-z 0-9 . _ -","Username may only use a-z 0-9 . _ -"],
+["ยอดเกินนี้ ขอวางมัดจำไว้หน่อย (THB)","Ask for a deposit above (THB)"],
+["อยากได้อะไรฝากมา เดี๋ยวเอากลับไปให้","Send me your list, I'll bring it back"],
+["ค้นหากระเป๋า ที่หมาย หรือของที่ฝาก","Search bags, destinations, or items"],
+["โหลด Firebase ไม่ได้ ลองใหม่อีกที","Couldn't load Firebase, try again"],
+["ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง","That username or password isn't right"],
+["ค่าฝากซื้อ 5% นะ โอนตอนของถึงมือ","5% shopper fee — pay when it arrives"],
+["รูปใหญ่ไปนิด ลองเลือกรูปอื่นนะ","Photo is too large — try another one"],
+["โหมดตัวอย่าง ออกจากระบบไม่ได้","Demo mode — can't log out"],
+["ปิดกระเป๋าแล้ว ทักตรงได้เลย","The bag's closed — message"],
 ["เช่น Tokyo, เชียงใหม่, สยาม","e.g. Tokyo, Chiang Mai, Siam"],
-["วางลิงค์ Google Maps","Paste a Google Maps link"],
+["กระเป๋ายังมีที่ว่างให้คุณนะ","I've got room for yours"],
+["ถ้ามีอะไรด่วน ทักตรงได้เลย","directly if something's urgent"],
+["ใส่ชื่อและของที่อยากได้เลย","Add the requester and item name first"],
+["แตะเพื่อเลือกวิธีคำนวณเงิน","Tap to choose how it's calculated"],
+["เปิดใน Safari/Chrome แล้ว","Open in Safari/Chrome"],
+["ลองผิดหลายครั้ง รอสักครู่","Too many tries — take a short break"],
+["กรอกชื่อผู้ใช้และรหัสผ่าน","Enter your username and password"],
+["กระเป๋าเพื่อนที่ฉันฝากไว้","Bags you've added to"],
+["คัดลองลิงค์แล้ว ส่งได้เลย","Link copied — go share it"],
+["ชื่อผู้ใช้นี้มีคนใช้แล้ว","That username is taken"],
+["ยังไม่ส่งรายการช็อปมาเลย","You haven't sent a list yet"],
+["ลบรายการที่จบแล้วทั้งหมด","Delete all finished items"],
+["+ ระบุสินค้าอื่นโดยเฉพาะ","+ Add a specific item type"],
+["เลื่อนซ้ายเพื่อลบรายการ","Swipe left to remove"],
+["รหัสผ่านอย่างน้อย 6 ตัว","Password must be at least 6 characters"],
+["เว้นว่าง = ไม่ต้องมัดจำ","Leave blank for no deposit"],
+["ส่งให้เพื่อนไว้เพิ่มคุณ","Share it so friends can add you"],
+["มาเป็นเพื่อนกันใน Toast","Add me on Toast"],
+["เช่น Kit Kat รสชาเขียว","e.g. Matcha Kit Kat"],
 ["วางลิงค์ที่เพื่อนส่งมา","Paste a friend's link"],
 ["เอาตัวสำรองที่เลือกไว้","Grab my backup pick"],
-["ข้ามไปได้เลย","Just skip it"],
-["ทักมาก่อนนะ","Message me first"],
 ["ถ้าหาไม่เจอ เอายังไงดี","If it's not there…"],
-["ของสำรอง","Backup pick"],
-["ถ้าหาไม่เจอ","If not found"],
-["ของทดแทน","Backup pick"],
 ["น้ำหนักโดยประมาณ (กก.)","Approx. weight (kg)"],
+["แตะใส่รูปของที่อยากได้","Tap to add a photo"],
+["ใส่ชื่อที่เพื่อนจะเห็น","Enter a display name"],
+["a-z 0-9 . _ - เท่านั้น","a-z 0-9 . _ - only"],
+["ใส่ตำแหน่งปัจจุบันแล้ว","Pinned your current spot"],
+["เหตุผล (ให้เพื่อนเห็น)","Reason (visible to your friend)"],
+["เช่น ต้องตามหาหลายสาขา","e.g. Need to check several branches"],
 ["ถ้าราคาต่างจากที่เห็น","if the price differs"],
+["ปิดรับฝาก (ไม่บังคับ)","Requests close (optional)"],
+["กระเป๋ายังว่างอยู่เลย","The bag's still empty"],
+["เป็นเพื่อนกันอยู่แล้ว","Already friends"],
+["ต้องอัปเดต Rules ก่อน","Update the rules first"],
+["ปรับค่าฝากซื้อชิ้นนี้","Set fee for this item"],
+["วางลิงค์ Google Maps","Paste a Google Maps link"],
+["ยังไม่มีของในกระเป๋า","Nothing in the bag yet"],
+["ตอนนี้คุณดูแบบผู้ฝาก","You're viewing as a requester"],
+["ได้ลิงค์จากเพื่อนมา?","Got a link?"],
+["กลับไปใช้ค่าปกติแล้ว","Back to the default"],
+["ไม่มีรายการที่จบแล้ว","No finished items"],
+["เช่น รองเท้า, นาฬิกา","e.g. Shoes, watches"],
+["ชิ้นแรก เริ่มตรงนี้","Tap above and start with one thing"],
+["เพิ่มไปยังหน้าจอโฮม","Add to Home Screen"],
+["รายละเอียดเพิ่มเติม","Details / notes"],
+["รวมค่าฝากซื้อ ≈ THB","Total incl. fee ≈ THB"],
+["+ ฝากของเข้ากระเป๋า","+ Add to the bag"],
+["รายการฝากซื้อนี้ของ","whose list this is"],
+["ข้อความจากคนช็อปให้","Note from your shopper"],
+["สมัครและเข้าสู่ระบบ","Sign up and start"],
+["ชื่อที่เพื่อนจะเห็น","Display name"],
+["เปลี่ยนรหัสผ่านแล้ว","Password changed"],
+["ยังไม่มีเพื่อนในแอพ","No friends here yet"],
+["เพิ่มเป็นเพื่อนแล้ว","Friend added"],
+["ตั้งเฉพาะชิ้นนี้ได้","Set a different fee just for this one"],
+["ล้างรายการที่จบแล้ว","Clear finished items"],
+["เช่น LINE: namwan99","e.g. LINE: namwan99"],
+["ไม่พบชื่อผู้ใช้นี้","Can't find that username"],
+["มัดจำเมื่อเกิน THB","Deposit above THB"],
+["ยืนยันรหัสผ่านใหม่","Confirm new password"],
+["รหัสผ่านไม่ถูกต้อง","Wrong password"],
+["ใส่อัตราเป็นตัวเลข","Enter the rate as a number"],
+["เปลี่ยนรูปพื้นหลัง","Change cover"],
+["ลบออกจากรายการแล้ว","Removed from your list"],
+["โหมดทดลองในเครื่อง","Local test mode"],
+["ใส่ข้อมูลจำลองแล้ว","Demo data added"],
 ["— ใส่หรือไม่ก็ได้","— optional"],
 ["ราคาที่ซื้อจริง (","Actual price ("],
-["ราคาที่เห็น (","Price seen ("],
-["งบไม่เกิน (","Budget cap ("],
-["ราคา (","Price ("],
-["ราคาที่เห็น","Price seen"],
-["งบไม่เกิน","Budget cap"],
-["จ่ายจริง","Paid"],
-["รวมค่าฝากซื้อ ≈ THB","Total incl. fee ≈ THB"],
+["รายละเอียดฝากซื้อ","Details"],
+["รหัสผ่านไม่ตรงกัน","Passwords don't match"],
+["นั่นไอดีของคุณเอง","That's your own ID"],
+["ใส่ชื่อเพื่อนก่อน","Add a name first"],
+["กำลังเปิดกระเป๋า…","Opening the bag…"],
+["ค่าฝากซื้อชิ้นนี้","Fee for this item"],
+["ใช้ค่าปกติของหมวด","Use the category default"],
+["ข้อความถึงเพื่อน","A note for your friends"],
 ["ไม่คิดค่าฝากซื้อ","On the house"],
-["ค่าฝากซื้อ THB","Fee THB"],
-["ค่าฝากซื้อ","Shopper fee"],
-["มัดจำเมื่อเกิน THB","Deposit above THB"],
-["โอนมัดจำก่อน","Pay deposit first"],
+["ลิสต์ยังว่างอยู่","Your list is empty"],
+["คุณเป็นผู้รับฝาก","Your bag"],
+["ใส่ปลายทางก่อนนะ","Add a destination first"],
+["ลบรายการนี้ถาวร?","Delete this item permanently?"],
+["ลิงค์เฉพาะบุคคล","Send it directly — they’ll only see their own items. More private, less mix-up."],
 ["% ของราคาสินค้า","% of item price"],
-["THB/ชิ้น","THB per item"],
-["THB/กก.","THB per kg"],
-["ต่อชิ้น","Per item"],
-["ต่อกก.","Per kg"],
-["ตามน้ำหนัก","By weight"],
-["ร้อยละ","Percent"],
-["ไม่คิดเงิน","On the house"],
-["เว้นว่าง = ไม่ต้องมัดจำ","Leave blank for no deposit"],
-["เว้นว่างได้","Leave blank if none"],
-["เปิดกระเป๋า","Open the bag"],
-["กระเป๋าใหม่","New bag"],
-["แก้ไขกระเป๋า","Edit bag"],
-["แชร์กระเป๋า","Share bag"],
-["สกุลเงินที่ใช้","Shopping currency"],
-["สกุลเงิน","Currency"],
-["ปิดรับฝาก (ไม่บังคับ)","Requests close (optional)"],
-["ปิดรับฝาก","Requests close"],
-["วันรับของ","Pickup date"],
 ["ยังไม่ได้นัดรับ","Pickup date not set"],
-["รับของในอีก","Pickup in"],
-["รับของ","Pickup"],
-["ยังไม่ระบุวัน","No date yet"],
-["ไม่ระบุวัน","No date"],
-["เร็ว ๆ นี้","Coming up"],
-["ที่ผ่านมา","Been there"],
-["กำลังช็อป","Out shopping"],
+["ใส่ของให้เพื่อน","Add for a friend"],
+["ใส่กระเป๋าแล้ว!","In the bag!"],
+["ชื่อร้าน / สาขา","Shop / branch"],
+["ยกเลิกรายการนี้","Cancel this one"],
+["เข้าสู่ระบบแล้ว","You're in!"],
+["เข้าสู่ระบบก่อน","Log in first"],
+["เปลี่ยนรหัสผ่าน","Change password"],
+["อย่างน้อย 6 ตัว","6 characters or more"],
+["เชื่อมต่อไม่ได้","Couldn't connect"],
+["เปลี่ยนชื่อแล้ว","Name updated"],
+["บันทึกอัตราแล้ว","Rate saved"],
+["ลิงค์ไม่ถูกต้อง","That doesn't look like a Toast link"],
+["ดูหน้าแบบผู้ฝาก","Preview requester view"],
+["ขอตำแหน่งไม่ได้","Couldn't get your location"],
+["คิดเหมือนกันหมด","Same for all"],
+["ลบรายการนี้ถาวร","Delete permanently"],
+["สกุลเงินที่ใช้","Shopping currency"],
 ["ฝากมาอีกได้เลย","Room in the bag"],
-["ยอดซื้อแล้ว","Spent so far"],
-["ในนี้ยังว่าง","Nothing here yet"],
-["กระเป๋าเพื่อนที่ฉันฝากไว้","Bags you've added to"],
-["ยังไม่ส่งรายการช็อปมาเลย","You haven't sent a list yet"],
-["กระเป๋ายังมีที่ว่างให้คุณนะ","I've got room for yours"],
+["ยอดซื้อทั้งหมด","Spent so far"],
+["บอกชื่อหน่อยนะ","Tell"],
+["ชื่อเล่นของคุณ","Your nickname"],
+["หาไม่เจอจริง ๆ","Couldn't find it"],
+["ไม่พบผู้ใช้นี้","User not found"],
+["ลบเพื่อนคนนี้?","Remove this friend?"],
+["สร้างไม่สำเร็จ","Couldn't create"],
+["ดูมุมของเพื่อน","See what friends see"],
+["ราคาที่เห็น (","Price seen ("],
+["ยังไม่ระบุวัน","No date yet"],
 ["สวัสดีตอนเช้า","Good morning"],
 ["สวัสดีตอนบ่าย","Good afternoon"],
 ["สวัสดีตอนเย็น","Good evening"],
-["อยากได้อะไรฝากมา เดี๋ยวเอากลับไปให้","Send me your list, I'll bring it back"],
-["ใส่ของให้เพื่อน","Add for a friend"],
-["กระเป๋ายังว่างอยู่เลย","The bag's still empty"],
-["ลิสต์ยังว่างอยู่","Your list is empty"],
-["ยังไม่มีของในกระเป๋า","Nothing in the bag yet"],
 ["รายการทั้งหมด","All items"],
-["ตามสถานะ","By status"],
-["ตามหมวด","By category"],
-["ร้านใกล้ฉัน","Nearest shop"],
-["คุณเป็นผู้รับฝาก","Your bag"],
-["ฝากซื้อกับ","Shopping with"],
-["ตอนนี้คุณดูแบบผู้ฝาก","You're viewing as a requester"],
-["รายละเอียดฝากซื้อ","Details"],
-["อัตรา 1","Rate 1"],
-["เรต 1","Rate 1"],
-["+ ฝากของเข้ากระเป๋า","+ Add to the bag"],
-["ฝากซื้อของ","Add to wishlist"],
-["ฝากในชื่อ","Requesting as"],
-["เปลี่ยนชื่อ","Change name"],
-["รายการที่ชอบ","Wishlist"],
-["ฝากโดย","Requested by"],
-["ฝากกับ","with"],
-["ใส่กระเป๋าแล้ว!","In the bag!"],
-["บอกชื่อหน่อยนะ","Tell"],
-["จะได้รู้ว่ารายการฝากซื้อนี้ของใคร","whose list this is"],
-["ชื่อเล่นของคุณ","Your nickname"],
-["ไปช็อปกัน","Let's shop"],
 ["ใส่ชื่อก่อนนะ","Add your name first"],
-["ใส่ชื่อก่อน","Add a name first"],
-["รูปสินค้า","Photo"],
-["แตะใส่รูปของที่อยากได้","Tap to add a photo"],
-["เพิ่มรูป","Add photo"],
-["ชื่อสินค้า","Item"],
-["จำนวน","Qty"],
-["ประเภท","Category"],
-["ตำแหน่งร้าน","Shop location"],
-["ชื่อร้าน / สาขา","Shop / branch"],
-["ร้านค้า","Shop"],
-["ตรงนี้","Here"],
-["รายละเอียด","Details"],
-["ของกิน","Food"],
-["เครื่องสำอาง","Beauty"],
-["แฟชั่น","Fashion"],
-["ของใช้","Home"],
-["ยา/วิตามิน","Pharmacy"],
-["อื่น ๆ","Other"],
-["จดไว้แล้ว","On my list"],
-["กำลังตามหา","On the hunt"],
-["เจอแล้ว!","Found it!"],
-["อยู่ในกระเป๋าแล้ว","In the bag"],
-["ส่งถึงมือแล้ว!","Delivered!"],
-["ถึงมือแล้ว","Delivered"],
-["ยกเลิกรายการนี้","Cancel this one"],
-["ยกเลิกแล้ว","Removed"],
-["ยกเลิก","Cancel"],
-["หาไม่เจอจริง ๆ","Couldn't find it"],
 ["เอากลับมาใหม่","Put it back"],
+["เช่น namwan99","e.g. namwan99"],
+["มีหมวดนี้แล้ว","That category already exists"],
+["ข้ามไปได้เลย","Just skip it"],
+["โอนมัดจำก่อน","Pay deposit first"],
+["แก้ไขกระเป๋า","Edit bag"],
+["ในนี้ยังว่าง","Nothing here yet"],
+["รายการที่ชอบ","Wishlist"],
+["เครื่องสำอาง","Beauty"],
+["รหัสผ่านใหม่","New password"],
+["ส่งให้เพื่อน","Send my ID"],
+["ไม่พบไอดีนี้","Can't find that ID"],
+["บันทึกไม่ได้","Couldn't save"],
+["ลิงค์ส่วนตัว","Personal link"],
+["โหมดตัวอย่าง","Demo mode"],
+["เช่น รองเท้า","e.g. Shoes"],
+["ทักมาก่อนนะ","Message me first"],
+["ถ้าหาไม่เจอ","If not found"],
+["งบไม่เกิน (","Budget cap ("],
+["ราคาที่เห็น","Price seen"],
+["เว้นว่างได้","Leave blank if none"],
+["เปิดกระเป๋า","Open the bag"],
+["กระเป๋าใหม่","New bag"],
+["แชร์กระเป๋า","Share bag"],
+["รับของในอีก","Pickup in"],
+["ร้านใกล้ฉัน","Nearest shop"],
+["เปลี่ยนชื่อ","Change name"],
+["ใส่ชื่อก่อน","Add a name first"],
+["ตำแหน่งร้าน","Shop location"],
+["เพื่อนคนไหน","Friend's name"],
+["เข้าสู่ระบบ","Log in"],
+["เพิ่มเพื่อน","Add a friend"],
+["(ไม่มีชื่อ)","(no name)"],
+["กรอกปลายทาง","Add a destination"],
+["เริ่มกันเลย","Let's go shopping"],
+["ค่าฝากซื้อ","Shopper fee"],
+["ตามน้ำหนัก","By weight"],
+["ไม่คิดเงิน","On the house"],
+["ไม่ระบุวัน","No date"],
+["เร็ว ๆ นี้","Coming up"],
+["ฝากซื้อกับ","Shopping with"],
+["ฝากซื้อของ","Add to wishlist"],
+["ชื่อสินค้า","Item"],
+["รายละเอียด","Details"],
+["ยา/วิตามิน","Pharmacy"],
+["กำลังตามหา","On the hunt"],
+["ถึงมือแล้ว","Delivered"],
+["ยกเลิกแล้ว","Removed"],
 ["อัปเดตเป็น","Updated to"],
-["ข้อความจากคนช็อปให้","Note from your shopper"],
 ["เปิดแผนที่","Open map"],
 ["ชื่อผู้ฝาก","For whom"],
-["เพื่อนคนไหน","Friend's name"],
-["เพื่อน","Friends"],
-["รายการ","Items"],
-["กระเป๋า","Bags"],
-["โปรไฟล์","Profile"],
-["เข้าสู่ระบบแล้ว","You're in!"],
-["เข้าสู่ระบบก่อน","Log in first"],
-["เข้าสู่ระบบ","Log in"],
-["สมัครและเข้าสู่ระบบ","Sign up and start"],
-["สมัครใหม่","Sign up"],
-["ชื่อที่เพื่อนจะเห็น","Display name"],
-["ใส่ชื่อที่เพื่อนจะเห็น","Enter a display name"],
 ["ชื่อผู้ใช้","Username"],
-["a-z 0-9 . _ - เท่านั้น","a-z 0-9 . _ - only"],
-["รหัสผ่านใหม่","New password"],
-["ยืนยันรหัสผ่านใหม่","Confirm new password"],
-["รหัสผ่านไม่ตรงกัน","Passwords don't match"],
-["รหัสผ่านไม่ถูกต้อง","Wrong password"],
-["เปลี่ยนรหัสผ่านแล้ว","Password changed"],
-["เปลี่ยนรหัสผ่าน","Change password"],
-["รหัสผ่าน","Password"],
-["อย่างน้อย 6 ตัว","6 characters or more"],
-["ชื่อเล่น","Nickname"],
 ["ออกจากระบบ","Log out"],
-["เชื่อมต่อไม่ได้","Couldn't connect"],
-["ผิดพลาด","Error"],
 ["ไอดีของคุณ","Your ID"],
-["ไอดี @","ID @"],
-["ส่งให้เพื่อนไว้เพิ่มคุณ","Share it so friends can add you"],
-["ส่งให้เพื่อน","Send my ID"],
-["เพิ่มเพื่อน","Add a friend"],
-["มาเป็นเพื่อนกันใน Toast","Add me on Toast"],
-["ยังไม่มีเพื่อนในแอพ","No friends here yet"],
-["เป็นเพื่อนกันอยู่แล้ว","Already friends"],
-["เพิ่มเป็นเพื่อนแล้ว","Friend added"],
-["นั่นไอดีของคุณเอง","That's your own ID"],
-["ไม่พบไอดีนี้","Can't find that ID"],
-["ไม่พบผู้ใช้นี้","User not found"],
-["ลบเพื่อนคนนี้?","Remove this friend?"],
-["เช่น namwan99","e.g. namwan99"],
-["(ไม่มีชื่อ)","(no name)"],
-["ภาษาอังกฤษกำลังตามมา","English is on its way"],
-["ภาษา","Language"],
-["พาเลตสี","Colour palette"],
-["พาเลต","Palette"],
-["ธีมสี","Colour palette"],
-["ธีม","Theme"],
-["อัตโนมัติ","Auto"],
 ["ตามเครื่อง","System"],
-["สว่าง","Light"],
-["มืด","Dark"],
-["เปลี่ยนชื่อแล้ว","Name updated"],
-["บันทึกอัตราแล้ว","Rate saved"],
 ["บันทึกแล้ว","Saved"],
-["บันทึกไม่ได้","Couldn't save"],
-["บันทึก","Save"],
-["ใส่อัตราเป็นตัวเลข","Enter the rate as a number"],
-["ใส่ปลายทางก่อนนะ","Add a destination first"],
-["กรอกปลายทาง","Add a destination"],
-["สร้างไม่สำเร็จ","Couldn't create"],
-["ปลายทาง","Destination"],
-["กำลังดึง…","Fetching…"],
 ["ลิงค์กลุ่ม","Group link"],
-["ลิงค์ส่วนตัว","Personal link"],
-["คัดลอกลิงค์แล้ว ส่งได้เลย","Link copied — go share it"],
-["คัดลอก","Copy"],
-["ลิงค์ไม่ถูกต้อง","That doesn't look like a Toast link"],
 ["ชื่อเพื่อน","Friend's name"],
-["ใส่ชื่อเพื่อนก่อน","Add a name first"],
-["แชร์ลิงค์","Share"],
-["แชร์…","Share…"],
-["แชร์","Share"],
-["สร้าง","Create"],
-["เปลี่ยนรูปพื้นหลัง","Change cover"],
-["ดูมุมของเพื่อน","See what friends see"],
-["ดูหน้าแบบผู้ฝาก","Preview requester view"],
-["หน้าแรก","Home"],
-["ตั้งค่า","Settings"],
-["แก้ไข","Edit"],
-["กลับ","Back"],
-["เสร็จ","Done"],
-["เลือก","Select"],
-["ลบออกจากรายการแล้ว","Removed from your list"],
-["ลบแล้ว","Removed"],
-["ลบไม่ได้","Couldn't delete"],
-["ต้องอัปเดต Rules ก่อน","Update the rules first"],
-["ลบ","Remove"],
-["เพิ่ม","Add"],
-["ไป","Go"],
 ["ได้ของแล้ว","Delivered"],
-["ได้ลิงค์จากเพื่อนมา?","Got a link?"],
-["วางลิงค์","Paste link"],
-["ส่งแล้ว","Sent"],
 ["ส่งให้แล้ว","Sent"],
-["ใส่ตำแหน่งปัจจุบันแล้ว","Pinned your current spot"],
-["ขอตำแหน่งไม่ได้","Couldn't get your location"],
-["กำลังเปิดกระเป๋า…","Opening the bag…"],
-["โหมดตัวอย่าง","Demo mode"],
-["โหมดทดลองในเครื่อง","Local test mode"],
-["ออนไลน์","Online"],
-["ใส่ข้อมูลจำลองแล้ว","Demo data added"],
-["กม.","km"],
-["คน","people"],
-["วัน","days"],
-["ฉัน","Me"],
-["แล้ว",""],
-["หมวดนี้คิดค่าฝากซื้อตามน้ำหนัก ใส่น้ำหนักด้วยนะ","This category charges by weight — add the weight"],
-["คิดเหมือนกันหมด","Same for all"],
 ["แยกตามหมวด","By category"],
-["+ เพิ่มหมวดสินค้า","+ Add a category"],
-["เพิ่มหมวดสินค้า","Add a category"],
-["ชื่อหมวด","Category name"],
-["เช่น รองเท้า","e.g. Shoes"],
-["มีหมวดนี้แล้ว","That category already exists"],
-["ปรับค่าฝากซื้อชิ้นนี้","Set fee for this item"],
-["ค่าฝากซื้อชิ้นนี้","Fee for this item"],
-["ปกติคิด","Normally"],
-["ตั้งเฉพาะชิ้นนี้ได้","Set a different fee just for this one"],
-["เหตุผล (ให้เพื่อนเห็น)","Reason (visible to your friend)"],
-["เช่น ต้องตามหาหลายสาขา","e.g. Need to check several branches"],
-["ใช้ค่าปกติของหมวด","Use the category default"],
-["กลับไปใช้ค่าปกติแล้ว","Back to the default"],
-["ลบรายการที่จบแล้วทั้งหมด","Delete all finished items"],
-["ล้างรายการที่จบแล้ว","Clear finished items"],
-["ลบรายการนี้ถาวร?","Delete this item permanently?"],
-["ลบรายการนี้ถาวร","Delete permanently"],
-["ไม่มีรายการที่จบแล้ว","No finished items"],
-["ไทย","ไทย"],
-["สวัสดี!","Hey there!"],
-["<label>รูป</label>","<label>Photo</label>"],
+["· เพิ่มเอง","· custom"],
+["งบไม่เกิน","Budget cap"],
+["ปิดรับฝาก","Requests close"],
+["วันรับของ","Pickup date"],
+["ที่ผ่านมา","Been there"],
+["กำลังช็อป","Out shopping"],
+["ฝากในชื่อ","Requesting as"],
+["ไปช็อปกัน","Let's shop"],
+["รูปสินค้า","Photo"],
+["จดไว้แล้ว","On my list"],
+["สมัครใหม่","Sign up"],
+["อัตโนมัติ","Auto"],
+["กำลังดึง…","Fetching…"],
+["แชร์ลิงค์","Share"],
 ["(ปิดแล้ว)","(closed)"],
-["เช่น 50","e.g. 50"],
+["ไม่รับฝาก","Not accepted"],
+["ของสำรอง","Backup pick"],
+["ของทดแทน","Backup pick"],
+["จ่ายจริง","Paid"],
+["THB/ชิ้น","THB per item"],
+["สกุลเงิน","Currency"],
+["ตามสถานะ","By status"],
+["เพิ่มรูป","Add photo"],
+["เจอแล้ว!","Found it!"],
+["รอรับเลย","Ready"],
+["รหัสผ่าน","Password"],
+["ชื่อเล่น","Nickname"],
+["ลบไม่ได้","Couldn't delete"],
+["วางลิงค์","Paste link"],
 ["เช่น 300","e.g. 300"],
 ["เช่น 1.5","e.g. 1.5"],
-["เช่น LINE: namwan99","e.g. LINE: namwan99"],
-["ค่าฝากซื้อ 5% นะ โอนตอนของถึงมือ","5% shopper fee — pay when it arrives"]
+["THB/กก.","THB per kg"],
+["ต่อชิ้น","Per item"],
+["ตามหมวด","By category"],
+["อัตรา 1","Rate 1"],
+["ร้านค้า","Shop"],
+["กระเป๋า","Bags"],
+["โปรไฟล์","Profile"],
+["ผิดพลาด","Error"],
+["พาเลตสี","Colour palette"],
+["ปลายทาง","Destination"],
+["หน้าแรก","Home"],
+["ตั้งค่า","Settings"],
+["ส่งแล้ว","Sent"],
+["ออนไลน์","Online"],
+["ปกติคิด","Normally"],
+["สวัสดี!","Hey there!"],
+["เช่น 50","e.g. 50"],
+["ราคา (","Price ("],
+["ต่อกก.","Per kg"],
+["ร้อยละ","Percent"],
+["รับของ","Pickup"],
+["ฝากโดย","Requested by"],
+["ฝากกับ","with"],
+["ประเภท","Category"],
+["ตรงนี้","Here"],
+["ของกิน","Food"],
+["แฟชั่น","Fashion"],
+["ของใช้","Home"],
+["อื่น ๆ","Other"],
+["ยกเลิก","Cancel"],
+["เพื่อน","Friends"],
+["รายการ","Items"],
+["ไอดี @","ID @"],
+["บันทึก","Save"],
+["คัดลอก","Copy"],
+["ลบแล้ว","Removed"],
+["เรต 1","Rate 1"],
+["จำนวน","Qty"],
+["พาเลต","Palette"],
+["ธีมสี","Colour palette"],
+["สว่าง","Light"],
+["แชร์…","Share…"],
+["สร้าง","Create"],
+["แก้ไข","Edit"],
+["เสร็จ","Done"],
+["เลือก","Select"],
+["เพิ่ม","Add"],
+["ภาษา","Language"],
+["แชร์","Share"],
+["กลับ","Back"],
+["แล้ว","Done"],
+["ธีม","Theme"],
+["มืด","Dark"],
+["กม.","km"],
+["วัน","days"],
+["ฉัน","Me"],
+["ไทย","ไทย"],
+["รูป","Photo"],
+["ลบ","Remove"],
+["ไป","Go"],
+["คน","people"]
 ];
-const EN_MAP=EN.filter(x=>x[0]).sort((a,b)=>b[0].length-a[0].length);
-function tr(s){if(LANG!=='en'||typeof s!=='string')return s;let out=s;for(const [th,en] of EN_MAP){if(out.includes(th))out=out.split(th).join(en);}return out;}
+const TH_RE=/[\u0E00-\u0E7F]/;
+const EN_MAP=EN.filter(x=>x[0]).sort((a,b)=>b[0].length-a[0].length).map(([t,e])=>[t,e,new RegExp('(?<![\\u0E00-\\u0E7F])'+t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?![\\u0E00-\\u0E7F])','g')]);
+function tr(s){if(LANG!=='en'||typeof s!=='string'||!TH_RE.test(s))return s;let out=s;for(const [th,en,re_] of EN_MAP){if(out.includes(th))out=out.replace(re_,en);}return out;}
 const DEMO=location.protocol==='file:'||Q.get('demo')==='1'||/preview|requester/.test(location.pathname);
 let DB=null,AUTH=null;
 const loadScript=src=>new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s)});
@@ -671,7 +678,7 @@ async function boot(){
       else{S.user=null;LS('toast:lastUser',null);if(!S.tripId){myTripsCache=null;renderLanding();return;}}
     } else { S.user=LS('toast:localUser'); }
   }
-  if(S.user){store.ensureProfile(S.user).then(u=>{S.myUsername=u});const addc=Q.get('add');if(addc){history.replaceState(null,'','./');const f=await store.findByUsername(addc);if(f&&f.uid!==S.user.uid){await store.addFriend(S.user,f);toast('เพิ่มเป็นเพื่อนแล้ว · '+f.name);}else if(!f)toast('ไม่พบผู้ใช้นี้');}}
+  if(S.user){store.ensureProfile(S.user).then(u=>{S.myUsername=u});const addc=Q.get('add');if(addc){history.replaceState(null,'','./');const f=await store.findByUsername(addc);if(f&&f.uid!==S.user.uid){await store.addFriend(S.user,f);toast('เพิ่ม '+f.name+' เพิ่มเป็นเพื่อนแล้ว');}else if(!f)toast('ไม่พบผู้ใช้นี้');}}
   if(!S.tripId&&S.user&&Q.get('cleanup')==='1'){await clearDemo();LS('toast:seeded:'+S.user.uid,null);history.replaceState(null,'','./');}
   if(!S.tripId&&REQPREVIEW&&DEMO){myTripsCache=await store.myTrips(S.user.uid);if(LS('toast:demoVer')!==6){await seedDemo(true);}const rr=LS('toast:recent')||[];const r=rr.find(x=>x.name==='London')||rr[0];if(r){S.tripId=r.id;S.role='requester';}}
   if(!S.tripId){if(DEMO||myTripsCache===null)renderLanding();else refreshHome(true);return;}
@@ -690,7 +697,7 @@ async function boot(){
   render();
 }
 function sessionOpened(){try{const v=sessionStorage.getItem('toast:opened');sessionStorage.setItem('toast:opened','1');return !!v}catch(e){return false}}
-function showCover(){return new Promise(res=>{const d=document.createElement('div');d.className='cover';d.innerHTML=`<div style="text-align:center"><h1>Toast</h1><p>${tr('อยากได้อะไรฝากมา เดี๋ยวเอากลับไปให้')}</p></div><button class="btn">${tr('ไปช็อปกัน')}</button>`;document.body.appendChild(d);d.querySelector('button').onclick=()=>{d.remove();res()}})}
+function showCover(){return new Promise(res=>{const d=document.createElement('div');d.className='cover';d.innerHTML=`<div style="text-align:center"><h1>Toast</h1><p>${tr('อยากได้อะไรฝากมา เดี๋ยวเอากลับไปให้')}</p></div><button class="btn">${tr('เริ่มกันเลย')}</button>`;document.body.appendChild(d);d.querySelector('button').onclick=()=>{d.remove();res()}})}
 async function doAuth(mode){
   if(!DEMO){const ok=await fbReady;if(!ok){toast('โหลด Firebase ไม่ได้ ลองใหม่อีกที');return}}
   const uname=$('#aUser').value.trim().toLowerCase(),pw=$('#aPw').value;
@@ -794,8 +801,8 @@ function bagsView(err,linkCard){
       <button type="button" class="cam" onclick="event.stopPropagation();document.getElementById('cov-${t.id}').click()" aria-label="เปลี่ยนรูปพื้นหลัง">${ic('camera',18)}</button><input id="cov-${t.id}" class="vh" type="file" accept="image/*" onclick="event.stopPropagation()" onchange="event.stopPropagation();pickCover(this,'${t.id}')">
       <div class="name">${esc(t.name)}</div>
       <div class="sub">${t.recv?'รับของ '+dfmt(t.recv):'ยังไม่ได้นัดรับ'}${t.close?' · ปิดรับฝาก '+dfmt(t.close):''} · ${esc(t.currency||'THB')}</div>
-      <div class="icons"><span>${ic('users',15)} ${ppl} คน</span><span>${ic('bag',15)} ${its.length} รายการ</span><span>${ic('check',15)} ${found} เจอแล้ว!</span></div>
-      <div class="foot"><span>ยอดซื้อแล้ว ${t.currency||'THB'} ${fmt(spent)}</span><span class="pill">${t.close&&t.close<=today?'กำลังช็อป':'ฝากมาอีกได้เลย'}</span></div></div>`};
+      <div class="icons"><span>${ic('users',15)} ${ppl} คน</span><span>${ic('bag',15)} ${its.length} รายการ</span><span>${ic('check',15)} ${found} เจอแล้ว</span></div>
+      <div class="foot"><span>ยอดซื้อทั้งหมด ${t.currency||'THB'} ${fmt(spent)}</span><span class="pill">${t.close&&t.close<=today?'กำลังช็อป':'ฝากมาอีกได้เลย'}</span></div></div>`};
   const small=t=>{const its=itemCounts[t.id]||[];let pill='';if(t.recv&&t.recv>=today)pill=`รับของในอีก ${daysTo(t.recv)} วัน`;else if(t.recv&&t.recv<today)pill='ส่งแล้ว';else pill='ไม่ระบุวัน';
     return `<div class="smallcard" onclick="location.href='?t=${t.id}'"><div><div class="n">${esc(t.name)}</div><div class="m">${t.recv?'รับของ '+dfmt(t.recv)+' · ':''}${its.length} รายการ · ${esc(t.currency||'THB')}</div></div><span class="pill">${pill}</span></div>`};
   const lists={future,past,undated};const cur=lists[bagFilter]||[];
@@ -826,7 +833,7 @@ function hideReq(id){const hd=new Set(LS('toast:hiddenReq')||[]);hd.add(id);LS('
 function toggleSel(id){if(!reqSel)return;reqSel.has(id)?reqSel.delete(id):reqSel.add(id);renderLanding()}
 function hideSelected(){const hd=new Set(LS('toast:hiddenReq')||[]);reqSel.forEach(id=>hd.add(id));LS('toast:hiddenReq',[...hd]);LS('toast:recent',(LS('toast:recent')||[]).filter(r=>!reqSel.has(r.id)));const n=reqSel.size;reqSel=null;toast('ลบแล้ว '+n+' รายการ');renderLanding()}
 function pickCover(inp,id){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');const s=Math.min(1,900/Math.max(im.width,im.height));c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);LS('toast:cover:'+id,c.toDataURL('image/jpeg',.7));renderLanding()};im.src=r.result};r.readAsDataURL(f)}
-const FEE_TYPES=[['none','ไม่คิดเงิน',''],['perItem','ต่อชิ้น','THB/ชิ้น'],['perKg','ตามน้ำหนัก','THB/กก.'],['percent','ร้อยละ','% ของราคาสินค้า']];
+const FEE_TYPES=[['none','ไม่คิดเงิน',''],['perItem','ต่อชิ้น','THB/ชิ้น'],['perKg','ตามน้ำหนัก','THB/กก.'],['percent','ร้อยละ','% ของราคาสินค้า'],['blocked','ไม่รับฝาก','']];
 let feeType='perItem';
 function openCreate(){
   sheet(`<h2>กระเป๋าใหม่</h2>
@@ -834,14 +841,15 @@ function openCreate(){
    <div class="row"><div class="field"><label>วันรับของ</label><input id="tRecv" type="date"></div><div class="field"><label>ปิดรับฝาก (ไม่บังคับ)</label><input id="tClose" type="date"></div></div>
    <div class="row"><div class="field"><label>สกุลเงินที่ใช้</label><select id="tCur" onchange="rateForCur()">${CURS.map(c=>`<option ${c==='JPY'?'selected':''}>${c}</option>`).join('')}</select></div>
    <div class="field"><label>เรต 1 <span id="rateLbl">JPY</span> = ? THB</label><input id="tRate" inputmode="decimal" placeholder="กำลังดึง…"></div></div>
-   <div class="approx" style="margin:0 0 12px">ล็อกเรตนี้ทั้งกระเป๋า เริ่มจากเรตวันนี้ แก้ได้ภายหลัง<br>ค่าฝากซื้อและรายละเอียดตั้งได้ที่ไอคอนดินสอหลังสร้าง</div>
+   <div class="approx" style="margin:0 0 12px">ล็อกเรตนี้ทั้งกระเป๋า เริ่มจากเรตวันนี้ แก้ได้ภายหลัง
+ค่าฝากซื้อและรายละเอียดตั้งได้ที่ไอคอนดินสอหลังสร้าง</div>
    <button class="btn block" onclick="createTrip()">เปิดกระเป๋า</button>`);
   rateForCur();
 }
 async function rateForCur(){const c=$('#tCur').value;$('#rateLbl').textContent=c;const r=await fetchRate(c);if($('#tRate')&&$('#tCur')&&$('#tCur').value===c)$('#tRate').value=r?(c==='THB'?'1':r.toFixed(4)):''}
-let feeMode='flat',catFees={},catList=[];
+let feeMode='flat',catFees={},catList=[],customCats=[];
 function openEdit(){
-  const t=S.trip;feeType=(t.fee&&t.fee.type)||'none';feeMode=t.feeMode==='cat'?'cat':'flat';catList=[...cats(t)];catFees=Object.assign({},t.catFees||{});
+  const t=S.trip;feeType=(t.fee&&t.fee.type)||'none';feeMode=t.feeMode==='cat'?'cat':'flat';catList=[...cats(t)];catFees=Object.assign({},t.catFees||{});customCats=catList.filter(c=>!CATS_DEFAULT.includes(c));
   sheet(`<h2>แก้ไขกระเป๋า</h2>
    <div class="field"><label>ปลายทาง</label><input id="eName" value="${esc(t.name)}"></div>
    <div class="row"><div class="field"><label>วันรับของ</label><input id="eRecv" type="date" value="${t.recv||''}"></div><div class="field"><label>ปิดรับฝาก</label><input id="eClose" type="date" value="${t.close||''}"></div></div>
@@ -852,7 +860,9 @@ function openEdit(){
      <div class="seg3" id="feePick">${FEE_TYPES.map(([k,l])=>`<button type="button" class="${feeType===k?'on':''}" onclick="feeType='${k}';pickCat(this);feeUI()">${l}</button>`).join('')}</div>
      <div class="field" id="feeVal"><label id="feeLbl"></label><input id="tFee" inputmode="decimal" value="${(t.fee&&t.fee.value)||''}" placeholder="เช่น 50"></div>
    </div>
-   <div id="catBox" class="hidden"><div id="catRows"></div><button type="button" class="btn ghost block sm" style="margin:8px 0 12px" onclick="addCat()">+ เพิ่มหมวดสินค้า</button></div>
+   <div id="catBox" class="hidden"><div id="catRows"></div>
+     <div class="addcat"><div class="t">+ ระบุสินค้าอื่นโดยเฉพาะ</div><div class="row"><input id="newCatName" placeholder="เช่น รองเท้า, นาฬิกา"><button type="button" class="btn sm" onclick="doAddCat()">เพิ่ม</button></div></div>
+     <div class="approx" style="margin:8px 0 12px">แตะเพื่อเลือกวิธีคำนวณเงิน</div></div>
    <div class="field"><label>ยอดเกินนี้ ขอวางมัดจำไว้หน่อย (THB)</label><input id="eDeposit" inputmode="decimal" value="${t.deposit||''}" placeholder="เว้นว่าง = ไม่ต้องมัดจำ"></div>
    <div class="field"><label>ข้อความถึงเพื่อน</label><textarea id="eNote" placeholder="เช่น ของเหลวไม่รับนะ · ของหนักคิดเพิ่ม">${esc(t.note||'')}</textarea></div>
    <button class="btn block" onclick="saveEdit()">บันทึก</button>
@@ -860,19 +870,19 @@ function openEdit(){
   feeUI();feeModeUI();
 }
 function feeModeUI(){$('#flatBox').classList.toggle('hidden',feeMode!=='flat');$('#catBox').classList.toggle('hidden',feeMode!=='cat');document.querySelectorAll('.seg3')[0].querySelectorAll('button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(feeMode==='flat')));if(feeMode==='cat')drawCatRows()}
-function drawCatRows(){const el=$('#catRows');el.innerHTML=catList.map((c,i)=>{const f=catFees[c]||{type:'none',value:''};return `<div class="catrow"><span class="cname">${esc(c)}</span><button type="button" class="ctype" onclick="cycleCat(${i})">${FEE_TYPES.find(x=>x[0]===(f.type||'none'))[1]}</button><input class="cval" inputmode="decimal" value="${f.value||''}" ${f.type==='none'||!f.type?'disabled placeholder="—"':''} oninput="setCatVal(${i},this.value)"></div>`}).join('')}
-function cycleCat(i){const c=catList[i];const order=FEE_TYPES.map(x=>x[0]);const cur=(catFees[c]&&catFees[c].type)||'none';const nx=order[(order.indexOf(cur)+1)%order.length];catFees[c]=Object.assign({},catFees[c],{type:nx});if(nx==='none')catFees[c].value=0;drawCatRows()}
+function drawCatRows(){const el=$('#catRows');el.innerHTML=catList.map((c,i)=>{const f=catFees[c]||{type:'none',value:''};const off=f.type==='none'||f.type==='blocked'||!f.type;return `<div class="catrow"><span class="cname">${esc(c)}${customCats.includes(c)?' <span class="muted" style="font-size:11px">· เพิ่มเอง</span>':''}</span><button type="button" class="ctype ${f.type==='blocked'?'no':''}" onclick="cycleCat(${i})">${FEE_TYPES.find(x=>x[0]===(f.type||'none'))[1]}</button><input class="cval" inputmode="decimal" value="${off?'':(f.value||'')}" ${off?'disabled placeholder="—"':''} oninput="setCatVal(${i},this.value)">${customCats.includes(c)?`<button type="button" class="cdel" onclick="delCat(${i})" aria-label="ลบ">×</button>`:''}</div>`}).join('')}
+function delCat(i){const c=catList[i];catList.splice(i,1);delete catFees[c];customCats=customCats.filter(x=>x!==c);drawCatRows()}
+function cycleCat(i){const c=catList[i];const order=FEE_TYPES.map(x=>x[0]);const cur=(catFees[c]&&catFees[c].type)||'none';const nx=order[(order.indexOf(cur)+1)%order.length];catFees[c]=Object.assign({},catFees[c],{type:nx});if(nx==='none'||nx==='blocked')catFees[c].value=0;drawCatRows()}
 function setCatVal(i,v){const c=catList[i];catFees[c]=Object.assign({type:'perItem'},catFees[c],{value:+v||0})}
-function addCat(){sheet(`<h2>เพิ่มหมวดสินค้า</h2><div class="field"><label>ชื่อหมวด</label><input id="newCatName" placeholder="เช่น รองเท้า"></div><button class="btn block" onclick="doAddCat()">เพิ่ม</button>`);setTimeout(()=>$('#newCatName')&&$('#newCatName').focus(),50)}
-function doAddCat(){const n=$('#newCatName').value.trim();if(!n)return;if(catList.includes(n))return toast('มีหมวดนี้แล้ว');catList.push(n);catFees[n]={type:'perItem',value:0};closeSheet();openEdit();}
+function doAddCat(){const el=$('#newCatName');const n=el.value.trim();if(!n)return;if(catList.includes(n))return toast('มีหมวดนี้แล้ว');catList.push(n);catFees[n]={type:'perItem',value:0};customCats.push(n);el.value='';drawCatRows();}
 async function saveEdit(){const name=$('#eName').value.trim();if(!name)return toast('ใส่ปลายทางก่อนนะ');const patch={name,recv:$('#eRecv').value||null,close:$('#eClose').value||null,rate:+$('#eRate').value||S.trip.rate||1,feeMode,cats:catList,catFees,fee:{type:feeType,value:feeType==='none'?0:(+($('#tFee')||{}).value||0)},deposit:+$('#eDeposit').value||null,note:$('#eNote').value.trim()};
   try{await store.updateTrip(S.tripId,patch);Object.assign(S.trip,patch);S.user&&LS('toast:cache:'+S.user.uid,null);closeSheet();toast('บันทึกแล้ว');render()}catch(e){toast('บันทึกไม่ได้: '+(e.code||e.message))}}
 function feeUI(){const t=FEE_TYPES.find(x=>x[0]===feeType);$('#feeVal').classList.toggle('hidden',feeType==='none');$('#feeLbl').textContent=t[2]}
-function oneFeeText(f){if(!f||f.type==='none'||!f.value)return 'ไม่คิดเงิน';return f.type==='perItem'?`THB ${fmt(f.value)} ต่อชิ้น`:f.type==='percent'?`${f.value}% ของราคาสินค้า`:`THB ${fmt(f.value)} ต่อกก.`}
-function feeText(t){t=t||S.trip;if(t.feeMode==='cat'&&t.catFees){const rows=cats(t).map(c=>`${c} ${oneFeeText(t.catFees[c])}`);return 'ค่าฝากซื้อ · '+rows.join(' · ')}
+function oneFeeText(f){if(f&&f.type==='blocked')return 'ไม่รับฝาก';if(!f||f.type==='none'||!f.value)return 'ไม่คิดเงิน';return f.type==='perItem'?`THB ${fmt(f.value)} ต่อชิ้น`:f.type==='percent'?`${f.value}% ของราคาสินค้า`:`THB ${fmt(f.value)} ต่อกก.`}
+function feeText(t){t=t||S.trip;if(t.feeMode==='cat'&&t.catFees){const rows=cats(t).filter(c=>(t.catFees[c]||{}).type!=='blocked').map(c=>`${c} ${oneFeeText(t.catFees[c])}`);const no=cats(t).filter(c=>(t.catFees[c]||{}).type==='blocked');return 'ค่าฝากซื้อ · '+rows.join(' · ')+(no.length?' · ไม่รับฝาก: '+no.join(', '):'')}
   const f=t.fee||{type:'none'};if(f.type==='none'||!f.value)return 'ไม่คิดค่าฝากซื้อ';return 'ค่าฝากซื้อ '+oneFeeText(f)}
 function feeRule(i,t){t=t||S.trip;if(i&&i.feeOverride&&i.feeOverride.type)return i.feeOverride;if(t.feeMode==='cat'&&t.catFees)return t.catFees[i&&i.cat]||{type:'none'};return t.fee||{type:'none'}}
-function feeFor(i,t){t=t||S.trip;const f=feeRule(i,t);const q=Number(i.qty)||1;const price=Number(i.paid||i.price)||0;const thb=price*(t.rate||1);
+function feeFor(i,t){t=t||S.trip;const f=feeRule(i,t);if(f.type==='blocked')return 0;const q=Number(i.qty)||1;const price=Number(i.paid||i.price)||0;const thb=price*(t.rate||1);
   if(f.type==='perItem')return (Number(f.value)||0)*q;if(f.type==='percent')return thb*q*(Number(f.value)||0)/100;if(f.type==='perKg')return (Number(f.value)||0)*(Number(i.weight)||0);return 0}
 function goodsThb(i,t){t=t||S.trip;return (Number(i.paid||i.price)||0)*(Number(i.qty)||1)*(t.rate||1)}
 function profileView(){
@@ -939,7 +949,7 @@ async function seedDemo(silent){
     {requester:'มายด์',name:'Tokyo Banana',cat:'ของกิน',price:1200,qty:5,shop:'Tokyo Station',status:'requested',fallback:'substitute',substitute:{name:'Tokyo Banana รสช็อกโกแลต',price:1300,qty:5,detail:'',shop:'Tokyo Station',photo:''}},
     {requester:'ปอ',name:'Onitsuka Tiger Mexico 66 เหลือง 40',cat:'แฟชั่น',price:13000,qty:1,shop:'Onitsuka Tiger Omotesando',status:'packed',paid:12800},
     {requester:'ปอ',name:'Daiso ที่คั่นหนังสือ',cat:'ของใช้',price:110,qty:10,shop:'Daiso Harajuku',status:'cancelled'},
-  ],{fee:{type:'perItem',value:50},rate:0.24,deposit:5000,note:'ของเหลวเกิน 100ml ไม่รับนะ'});
+  ],{fee:{type:'perItem',value:50},rate:0.24,deposit:5000,note:'ไม่รับของเหลวเกิน 100ml'});
   await mk('Hong Kong',"HKD",d(-122),d(-115),[
     {requester:'มายด์',name:'Jenny Bakery คุกกี้เนย 4 mix',cat:'ของกิน',price:170,qty:2,shop:'Jenny Bakery Tsim Sha Tsui',status:'delivered',paid:170},
     {requester:'ปอ',name:'Lee Kum Kee ซอส XO',cat:'ของกิน',price:88,qty:3,shop:'Wellcome',status:'delivered',paid:85},
@@ -1033,7 +1043,7 @@ function itemsView(){
   else{list.sort((a,b)=>(a.cat||'').localeCompare(b.cat||'','th')||(a.name||'').localeCompare(b.name||'','th'));}
   const nOff=S.items.filter(i=>offSet.includes(i.status)).length;
   let body='';
-  if(itemSort==='cat'&&list.length){const g={};list.forEach(i=>(g[i.cat||'อื่น ๆ']=g[i.cat||'อื่น ๆ']||[]).push(i));body=Object.keys(g).map(k=>`<div class="card"><h3 style="margin-bottom:4px">${esc(k)} <span class="muted">${g[k].length}</span></h3>${g[k].map(itemRow).join('')}</div>`).join('');}
+  if(itemSort==='cat'&&list.length){const g={};list.forEach(i=>(g[i.cat||'อื่น ๆ']=g[i.cat||'อื่น ๆ']||[]).push(i));const ord=[...cats(),'อื่น ๆ'];const keys=Object.keys(g).sort((a,b)=>{const ia=ord.indexOf(a),ib=ord.indexOf(b);return (ia<0?999:ia)-(ib<0?999:ib)});body=keys.map(k=>`<div class="card"><h3 style="margin-bottom:4px">${esc(k)} <span class="muted">${g[k].length}</span></h3>${g[k].map(itemRow).join('')}</div>`).join('');}
   else body=`<div class="card">${list.length?list.map(itemRow).join(''):'<div class="empty">ยังไม่มีของในกระเป๋า</div>'}</div>`;
   return `
    <div class="seg"><button class="${f.view!=='off'?'on':''}" onclick="S.filter.view='all';render()">รายการทั้งหมด</button><button class="${f.view==='off'?'on':''}" onclick="S.filter.view='off';render()">ยกเลิก${nOff?' ('+nOff+')':''}</button></div>
@@ -1046,7 +1056,8 @@ function locateMe(){navigator.geolocation.getCurrentPosition(p=>{S.pos={lat:p.co
 function openShare(){
   const link=location.origin+location.pathname+`?t=${S.tripId}&r=1`;
   sheet(`<h2>แชร์กระเป๋า</h2>
-    <h3>ลิงค์กลุ่ม</h3><p class="muted">ลิงก์เดียวให้ทั้งกลุ่ม ฝากได้ทันที ไม่ต้องเป็นสมาชิก<br>ทุกคนกดลิงค์เดียวกัน แต่เห็นแค่ของตัวเอง</p>
+    <h3>ลิงค์กลุ่ม</h3><p class="muted">ลิงก์เดียวให้ทั้งกลุ่ม ฝากได้ทันที ไม่ต้องเป็นสมาชิก
+ทุกคนกดลิงค์เดียวกัน แต่เห็นแค่ของตัวเอง</p>
     <div class="share" style="margin:8px 0"><code>${esc(link)}</code><button class="btn sm" onclick="copyLink('${link}')">คัดลอก</button></div>
     ${navigator.share?`<button class="btn block ghost" onclick="navigator.share({title:'ฝากซื้อกับ ${esc(S.trip.shopper)} · ${esc(S.trip.name)}',url:'${link}'})">แชร์…</button>`:''}
     <h3 style="margin-top:18px">ลิงค์ส่วนตัว</h3><p class="muted">ลิงค์เฉพาะบุคคล</p>
@@ -1054,15 +1065,15 @@ function openShare(){
 }
 async function toggleInvite(fuid,on){const inv=new Set(S.trip.invited||[]);on?inv.add(fuid):inv.delete(fuid);const arr=[...inv];await store.updateTrip(S.tripId,{invited:arr});S.trip.invited=arr;toast(on?'ส่งให้แล้ว':'ยกเลิกแล้ว')}
 function personalLink(){const n=$('#plName').value.trim();if(!n)return toast('ใส่ชื่อเพื่อนก่อน');const tok=uid(8);const l=location.origin+location.pathname+`?t=${S.tripId}&r=1&p=${tok}&n=${encodeURIComponent(n)}`;$('#plOut').innerHTML=`<div class="share" style="margin-top:8px"><code>${esc(l)}</code><button class="btn sm" onclick="copyLink('${l}')">คัดลอก</button></div>`}
-function copyLink(l){navigator.clipboard.writeText(l).then(()=>toast('คัดลอกลิงค์แล้ว ส่งได้เลย'))}
+function copyLink(l){navigator.clipboard.writeText(l).then(()=>toast('คัดลองลิงค์แล้ว ส่งได้เลย'))}
 
 /* --- requester --- */
 function renderRequester(){
-  if(!S.me){shell(`<div class="card"><h2>สวัสดี!</h2><p class="muted">บอกชื่อหน่อยนะ ${esc(S.trip.shopper)} จะได้รู้ว่ารายการฝากซื้อนี้ของใคร</p><div class="field" style="margin-top:10px"><input id="meName" placeholder="ชื่อเล่นของคุณ"></div><button class="btn block" onclick="S.me=$('#meName').value.trim();if(!S.me)return toast('ใส่ชื่อก่อนนะ');LS('toast:me',S.me);render()">ไปช็อปกัน</button></div>`);return;}
+  if(!S.me){shell(`<div class="card"><h2>สวัสดี!</h2><p class="muted">บอกชื่อหน่อยนะ ${esc(S.trip.shopper)} รายการฝากซื้อนี้ของ</p><div class="field" style="margin-top:10px"><input id="meName" placeholder="ชื่อเล่นของคุณ"></div><button class="btn block" onclick="S.me=$('#meName').value.trim();if(!S.me)return toast('ใส่ชื่อก่อนนะ');LS('toast:me',S.me);render()">ไปช็อปกัน</button></div>`);return;}
   const mine=S.items.filter(i=>i.rid&&i.rid===S.rid);
   const t=S.trip;const closed=t.close&&t.close<todayStr();const rules=`<div class="card" style="padding:10px 14px"><div style="font-weight:500">รายละเอียดฝากซื้อ</div><div class="muted">${[t.recv?`รับของ ${dfmt(t.recv)}`:'',t.close?`ปิดรับฝาก ${dfmt(t.close)}${closed?' (ปิดแล้ว)':''}`:''].filter(Boolean).join(' · ')}${(t.recv||t.close)?'<br>':''}อัตรา 1 ${cur()} = ${(t.rate||1).toFixed(4)} THB · ${feeText(t)}${t.deposit?` · มัดจำเมื่อเกิน THB ${fmt(t.deposit)} โอนมัดจำก่อน`:''}${t.note?`<br>${esc(t.note)}`:''}</div></div>`;
   shell(rules+`
-   ${closed?`<div class="card" style="text-align:center;color:var(--ink-2)">ปิดกระเป๋าแล้ว ทัก ${esc(t.shopper)} ตรงได้เลยถ้ามีอะไรด่วน</div>`:`<button class="btn block" style="margin-bottom:12px" onclick="openItemForm()">+ ฝากของเข้ากระเป๋า</button>`}
+   ${closed?`<div class="card" style="text-align:center;color:var(--ink-2)">ปิดกระเป๋าแล้ว ทักตรงได้เลย ${esc(t.shopper)} ถ้ามีอะไรด่วน ทักตรงได้เลย</div>`:`<button class="btn block" style="margin-bottom:12px" onclick="openItemForm()">+ ฝากของเข้ากระเป๋า</button>`}
    ${mine.length?`<div class="card">${mine.map(itemRow).join('')}</div>`:emptyState('ลิสต์ยังว่างอยู่','ชิ้นแรก เริ่มตรงนี้')}
    <p class="muted" style="text-align:center">ฝากในชื่อ <b>${esc(S.me)}</b> · <button class="btn ghost sm" onclick="S.me='';LS('toast:me','');render()">เปลี่ยนชื่อ</button></p>`);
 }
@@ -1083,7 +1094,7 @@ function openItemForm(){
    <div class="row"><div class="field"><label>ราคาที่เห็น (${cur()})</label><input id="fPrice" inputmode="decimal" oninput="approx('fPrice','aPrice')"><div class="approx" id="aPrice" style="margin:2px 0 0"></div></div><div class="field"><label>จำนวน</label><input id="fQty" inputmode="numeric" value="1"></div></div>
    <div class="field hidden" id="wBox"><label>น้ำหนักโดยประมาณ (กก.)</label><input id="fWeight" inputmode="decimal" placeholder="เช่น 1.5"></div>
    <div class="field"><label>งบไม่เกิน (${cur()}) ถ้าราคาต่างจากที่เห็น</label><input id="fBudget" inputmode="decimal" placeholder="เว้นว่างได้" oninput="approx('fBudget','aBudget')"><div class="approx" id="aBudget" style="margin:2px 0 0"></div></div>
-   <div class="field"><label>ประเภท</label><div class="catpick" id="fCatPick">${cats().map((c,i)=>`<button type="button" class="chip ${i===0?'on':''}" onclick="pickCat(this)">${c}</button>`).join('')}</div></div>
+   <div class="field"><label>ประเภท</label><div class="catpick" id="fCatPick">${catsOpen().map((c,i)=>`<button type="button" class="chip ${i===0?'on':''}" onclick="pickCat(this)">${c}</button>`).join('')}</div></div>
    <div class="field"><label>รายละเอียดเพิ่มเติม</label><textarea id="fDetail" placeholder="สี ไซซ์ รุ่น หรือรายละเอียดที่อยากกำชับ"></textarea></div>
    <div class="field"><label>ร้านค้า</label><input id="fShop" placeholder="ชื่อร้าน / สาขา"></div>
    <div class="field"><label>ตำแหน่งร้าน</label><div class="row"><input id="fLoc" placeholder="วางลิงค์ Google Maps"><button class="btn ghost sm" onclick="useHere()">ตรงนี้</button></div></div>
@@ -1103,7 +1114,7 @@ function openItemForm(){
 }
 function fbUI(v){$('#subBox').classList.toggle('hidden',v!=='substitute');$('#contactBox').classList.toggle('hidden',v!=='contact')}
 function pickCat(b){[...b.parentNode.children].forEach(x=>x.classList.remove('on'));b.classList.add('on');wUI()}
-function wUI(){const box=$('#wBox');if(!box)return;const c=(($('#fCatPick .on')||{}).textContent)||cats()[0];const r=feeRule({cat:c},S.trip);box.classList.toggle('hidden',r.type!=='perKg')}
+function wUI(){const box=$('#wBox');if(!box)return;const c=(($('#fCatPick .on')||{}).textContent)||catsOpen()[0]||cats()[0];const r=feeRule({cat:c},S.trip);box.classList.toggle('hidden',r.type!=='perKg')}
 function pickPhoto(inp,imgId,which){
   const f=inp.files[0];if(!f)return;const r=new FileReader();
   r.onload=()=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');const s=Math.min(1,720/Math.max(im.width,im.height));c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);const d=c.toDataURL('image/jpeg',.6);which==='main'?photoData=d:subPhotoData=d;$('#'+imgId).src=d;$('#'+imgId).parentNode.classList.add('has');};im.src=r.result;};
@@ -1150,7 +1161,7 @@ function openItem(id){
    ${i.note?`<p class="muted">ข้อความจากคนช็อปให้: ${esc(i.note)}</p>`:''}
    <ul class="timeline">${(i.log||[]).map(l=>`<li>${STATUS[l.s]} · ${new Date(l.at).toLocaleString(LANG==='en'?'en-US':'th-TH',LANG==='en'?{month:'short',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}:{dateStyle:'short',timeStyle:'short'})}</li>`).join('')}</ul>
    ${isShopper&&!off&&next?`<div style="margin-top:14px">${['requested','searching'].includes(i.status)?`<div class="field"><label>ราคาที่ซื้อจริง (${cur()}) — ใส่หรือไม่ก็ได้</label><input id="uPaid" inputmode="decimal" value="${i.paid||''}" oninput="approx('uPaid','aPaid')"><div class="approx" id="aPaid" style="margin:2px 0 0"></div></div>`:''}<button class="btn block" onclick="setStatus('${i.id}','${next}')">→ ${STATUS[next]}</button></div>`:''}
-   ${isShopper&&!off?`<div class="row" style="margin-top:8px"><button class="btn danger" onclick="setStatus('${i.id}','notfound')">หาไม่เจอจริง ๆ</button><button class="btn ghost" onclick="setStatus('${i.id}','cancelled')">ยกเลิก</button></div>`:''}
+   ${isShopper&&!off?`<div class="row" style="margin-top:8px"><button class="btn danger" onclick="setStatus('${i.id}','notfound')">หาไม่ได้</button><button class="btn ghost" onclick="setStatus('${i.id}','cancelled')">ยกเลิก</button></div>`:''}
    ${isShopper&&off?`<button class="btn ghost block" style="margin-top:8px" onclick="setStatus('${i.id}','requested')">เอากลับมาใหม่</button>`:''}
    ${isShopper?`<button class="btn ghost block sm" style="margin-top:8px" onclick="editItemFee('${i.id}')">ปรับค่าฝากซื้อชิ้นนี้</button>`:''}
    ${isShopper&&(off||i.status==='delivered')?`<button class="btn danger block" style="margin-top:8px" onclick="delItem('${i.id}')">ลบรายการนี้ถาวร</button>`:''}
@@ -1174,7 +1185,7 @@ async function setStatus(id,s){
   const patch={status:s,log:[...(i.log||[]),{s,at:Date.now()}]};
   const p=$('#uPaid');if(p&&p.value)patch.paid=+p.value;
   await store.updateItem(S.tripId,id,patch);closeSheet();
-  toast(s==='delivered'?'ส่งถึงมือแล้ว!':'อัปเดตเป็น "'+STATUS[s]+'"');
+  toast(s==='delivered'?'ถึงมือแล้ว!':'อัปเดตเป็น "'+STATUS[s]+'"');
 }
 
 /* ---------- 8. settings ---------- */
