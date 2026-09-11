@@ -109,6 +109,12 @@ main.hasfab{padding-bottom:150px}
 .catrow:first-child{border-top:0}
 .catrow .cname{flex:1;min-width:0}
 .catrow .ctype{font-size:12.5px;color:var(--accent-deep);padding:4px 8px;border-radius:8px;background:var(--accent-soft);white-space:nowrap}
+.feelist{margin-top:8px;border-top:1px solid var(--line);padding-top:6px}
+.feelist .h{font-size:13px;color:var(--ink-2);font-weight:400;margin-bottom:2px}
+.feelist .r{display:flex;justify-content:space-between;gap:12px;padding:3px 0;font-size:13.5px}
+.feelist .r span{color:var(--ink-2);font-weight:300}
+.feelist .r b{font-weight:400;text-align:right}
+.feelist .r.no b{color:#B0483F}
 .catrow .ctype.no{background:#FBE3E3;color:#B0483F}
 .catrow .cdel{width:26px;height:26px;border-radius:50%;color:var(--ink-2);font-size:18px;line-height:1;flex:none}
 .addcat{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:10px 12px;margin-top:10px}
@@ -251,7 +257,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='4.6';
+const VERSION='4.7';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -305,6 +311,10 @@ async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncod
 const Q=new URLSearchParams(location.search);
 const REQPREVIEW=/requester/.test(location.pathname);
 const EN=[
+["ปิดกระเป๋าแล้ว ถ้ามีอะไรด่วน ทัก","The bag's closed — message"],
+["ได้เลย","directly if something's urgent"],
+["เช่น ของเกิน 5,000 บาท ขอมัดจำครึ่งหนึ่ง","e.g. Deposit half for items over 5,000 THB"],
+["เงื่อนไขมัดจำ","Deposit terms"],
 ["ยังอยู่ในโหมดทดลองในเครื่อง กระเป๋าเห็นได้เฉพาะเบราว์เซอร์ที่สร้าง — ต้องเชื่อม Firebase ก่อนจึงจะแชร์ลิงค์ให้เพื่อนได้","Still in local test mode — bags are only visible in the browser that created them"],
 ["ล็อกเรตนี้ทั้งกระเป๋า เริ่มจากเรตวันนี้ แก้ได้ภายหลัง\nค่าฝากซื้อและรายละเอียดตั้งได้ที่ไอคอนดินสอหลังสร้าง","Locked for this bag — starts at today's rate, editable\nfee and details can be set later via the pencil icon"],
 ["ลิงก์เดียวให้ทั้งกลุ่ม ฝากได้ทันที ไม่ต้องเป็นสมาชิก\nทุกคนกดลิงค์เดียวกัน แต่เห็นแค่ของตัวเอง","Drop it in the group chat — friends add their picks right away, no sign-up\nsame link for everyone, but each sees only their own"],
@@ -863,7 +873,7 @@ function openEdit(){
    <div id="catBox" class="hidden"><div id="catRows"></div>
      <div class="addcat"><div class="t">+ ระบุสินค้าอื่นโดยเฉพาะ</div><div class="row"><input id="newCatName" placeholder="เช่น รองเท้า, นาฬิกา"><button type="button" class="btn sm" onclick="doAddCat()">เพิ่ม</button></div></div>
      <div class="approx" style="margin:8px 0 12px">แตะเพื่อเลือกวิธีคำนวณเงิน</div></div>
-   <div class="field"><label>ยอดเกินนี้ ขอวางมัดจำไว้หน่อย (THB)</label><input id="eDeposit" inputmode="decimal" value="${t.deposit||''}" placeholder="เว้นว่าง = ไม่ต้องมัดจำ"></div>
+   <div class="field"><label>เงื่อนไขมัดจำ</label><input id="eDeposit" value="${esc(t.deposit||'')}" placeholder="เช่น ของเกิน 5,000 บาท ขอมัดจำครึ่งหนึ่ง"></div>
    <div class="field"><label>ข้อความถึงเพื่อน</label><textarea id="eNote" placeholder="เช่น ของเหลวไม่รับนะ · ของหนักคิดเพิ่ม">${esc(t.note||'')}</textarea></div>
    <button class="btn block" onclick="saveEdit()">บันทึก</button>
    <a class="btn ghost block" style="margin-top:8px" href="?t=${S.tripId}&r=1">ดูมุมของเพื่อน</a>`);
@@ -875,10 +885,18 @@ function delCat(i){const c=catList[i];catList.splice(i,1);delete catFees[c];cust
 function cycleCat(i){const c=catList[i];const order=FEE_TYPES.map(x=>x[0]);const cur=(catFees[c]&&catFees[c].type)||'none';const nx=order[(order.indexOf(cur)+1)%order.length];catFees[c]=Object.assign({},catFees[c],{type:nx});if(nx==='none'||nx==='blocked')catFees[c].value=0;drawCatRows()}
 function setCatVal(i,v){const c=catList[i];catFees[c]=Object.assign({type:'perItem'},catFees[c],{value:+v||0})}
 function doAddCat(){const el=$('#newCatName');const n=el.value.trim();if(!n)return;if(catList.includes(n))return toast('มีหมวดนี้แล้ว');catList.push(n);catFees[n]={type:'perItem',value:0};customCats.push(n);el.value='';drawCatRows();}
-async function saveEdit(){const name=$('#eName').value.trim();if(!name)return toast('ใส่ปลายทางก่อนนะ');const patch={name,recv:$('#eRecv').value||null,close:$('#eClose').value||null,rate:+$('#eRate').value||S.trip.rate||1,feeMode,cats:catList,catFees,fee:{type:feeType,value:feeType==='none'?0:(+($('#tFee')||{}).value||0)},deposit:+$('#eDeposit').value||null,note:$('#eNote').value.trim()};
+async function saveEdit(){const name=$('#eName').value.trim();if(!name)return toast('ใส่ปลายทางก่อนนะ');const patch={name,recv:$('#eRecv').value||null,close:$('#eClose').value||null,rate:+$('#eRate').value||S.trip.rate||1,feeMode,cats:catList,catFees,fee:{type:feeType,value:feeType==='none'?0:(+($('#tFee')||{}).value||0)},deposit:$('#eDeposit').value.trim()||null,note:$('#eNote').value.trim()};
   try{await store.updateTrip(S.tripId,patch);Object.assign(S.trip,patch);S.user&&LS('toast:cache:'+S.user.uid,null);closeSheet();toast('บันทึกแล้ว');render()}catch(e){toast('บันทึกไม่ได้: '+(e.code||e.message))}}
 function feeUI(){const t=FEE_TYPES.find(x=>x[0]===feeType);$('#feeVal').classList.toggle('hidden',feeType==='none');$('#feeLbl').textContent=t[2]}
 function oneFeeText(f){if(f&&f.type==='blocked')return 'ไม่รับฝาก';if(!f||f.type==='none'||!f.value)return 'ไม่คิดเงิน';return f.type==='perItem'?`THB ${fmt(f.value)} ต่อชิ้น`:f.type==='percent'?`${f.value}% ของราคาสินค้า`:`THB ${fmt(f.value)} ต่อกก.`}
+function feeLines(t){t=t||S.trip;
+  if(t.feeMode==='cat'&&t.catFees){
+    const open=cats(t).filter(c=>(t.catFees[c]||{}).type!=='blocked');
+    const no=cats(t).filter(c=>(t.catFees[c]||{}).type==='blocked');
+    return `<div class="feelist"><div class="h">ค่าฝากซื้อ</div>${open.map(c=>`<div class="r"><span>${esc(c)}</span><b>${oneFeeText(t.catFees[c])}</b></div>`).join('')}${no.length?`<div class="r no"><span>ไม่รับฝาก</span><b>${no.map(esc).join(', ')}</b></div>`:''}</div>`;
+  }
+  return `<div class="feelist"><div class="r"><span>ค่าฝากซื้อ</span><b>${oneFeeText(t.fee||{type:'none'})}</b></div></div>`;
+}
 function feeText(t){t=t||S.trip;if(t.feeMode==='cat'&&t.catFees){const rows=cats(t).filter(c=>(t.catFees[c]||{}).type!=='blocked').map(c=>`${c} ${oneFeeText(t.catFees[c])}`);const no=cats(t).filter(c=>(t.catFees[c]||{}).type==='blocked');return 'ค่าฝากซื้อ · '+rows.join(' · ')+(no.length?' · ไม่รับฝาก: '+no.join(', '):'')}
   const f=t.fee||{type:'none'};if(f.type==='none'||!f.value)return 'ไม่คิดค่าฝากซื้อ';return 'ค่าฝากซื้อ '+oneFeeText(f)}
 function feeRule(i,t){t=t||S.trip;if(i&&i.feeOverride&&i.feeOverride.type)return i.feeOverride;if(t.feeMode==='cat'&&t.catFees)return t.catFees[i&&i.cat]||{type:'none'};return t.fee||{type:'none'}}
@@ -1071,9 +1089,9 @@ function copyLink(l){navigator.clipboard.writeText(l).then(()=>toast('คัด�
 function renderRequester(){
   if(!S.me){shell(`<div class="card"><h2>สวัสดี!</h2><p class="muted">บอกชื่อหน่อยนะ ${esc(S.trip.shopper)} รายการฝากซื้อนี้ของ</p><div class="field" style="margin-top:10px"><input id="meName" placeholder="ชื่อเล่นของคุณ"></div><button class="btn block" onclick="S.me=$('#meName').value.trim();if(!S.me)return toast('ใส่ชื่อก่อนนะ');LS('toast:me',S.me);render()">ไปช็อปกัน</button></div>`);return;}
   const mine=S.items.filter(i=>i.rid&&i.rid===S.rid);
-  const t=S.trip;const closed=t.close&&t.close<todayStr();const rules=`<div class="card" style="padding:10px 14px"><div style="font-weight:500">รายละเอียดฝากซื้อ</div><div class="muted">${[t.recv?`รับของ ${dfmt(t.recv)}`:'',t.close?`ปิดรับฝาก ${dfmt(t.close)}${closed?' (ปิดแล้ว)':''}`:''].filter(Boolean).join(' · ')}${(t.recv||t.close)?'<br>':''}อัตรา 1 ${cur()} = ${(t.rate||1).toFixed(4)} THB · ${feeText(t)}${t.deposit?` · มัดจำเมื่อเกิน THB ${fmt(t.deposit)} โอนมัดจำก่อน`:''}${t.note?`<br>${esc(t.note)}`:''}</div></div>`;
+  const t=S.trip;const closed=t.close&&t.close<todayStr();const rules=`<div class="card" style="padding:12px 14px"><div style="font-weight:500;margin-bottom:4px">รายละเอียดฝากซื้อ</div><div class="muted" style="line-height:1.7">${[t.recv?`รับของ ${dfmt(t.recv)}`:'',t.close?`ปิดรับฝาก ${dfmt(t.close)}${closed?' (ปิดแล้ว)':''}`:''].filter(Boolean).join(' · ')}${(t.recv||t.close)?'<br>':''}อัตรา 1 ${cur()} = ${(t.rate||1).toFixed(4)} THB</div>${feeLines(t)}${t.deposit?`<div class="muted" style="margin-top:6px">${esc(String(t.deposit))}</div>`:''}${t.note?`<div class="muted" style="margin-top:6px;line-height:1.7">${esc(t.note)}</div>`:''}</div>`;
   shell(rules+`
-   ${closed?`<div class="card" style="text-align:center;color:var(--ink-2)">ปิดกระเป๋าแล้ว ทักตรงได้เลย ${esc(t.shopper)} ถ้ามีอะไรด่วน ทักตรงได้เลย</div>`:`<button class="btn block" style="margin-bottom:12px" onclick="openItemForm()">+ ฝากของเข้ากระเป๋า</button>`}
+   ${closed?`<div class="card" style="text-align:center;color:var(--ink-2)">ปิดกระเป๋าแล้ว ถ้ามีอะไรด่วน ทัก ${esc(t.shopper)} ได้เลย</div>`:`<button class="btn block" style="margin-bottom:12px" onclick="openItemForm()">+ ฝากของเข้ากระเป๋า</button>`}
    ${mine.length?`<div class="card">${mine.map(itemRow).join('')}</div>`:emptyState('ลิสต์ยังว่างอยู่','ชิ้นแรก เริ่มตรงนี้')}
    <p class="muted" style="text-align:center">ฝากในชื่อ <b>${esc(S.me)}</b> · <button class="btn ghost sm" onclick="S.me='';LS('toast:me','');render()">เปลี่ยนชื่อ</button></p>`);
 }
