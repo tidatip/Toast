@@ -24,8 +24,12 @@
 :root[data-mode=dark] .sheet{background:#1B1712}
 :root[data-mode=dark] .toastmsg{background:#F4E9D2;color:#1E1A14}
 .field input[type=date]{min-width:0;width:100%;-webkit-appearance:none;appearance:none;display:block}
-.hero{text-align:center;padding:44vh 0 4px}
-.hero img{display:none}
+.cover{position:fixed;inset:0;z-index:60;background:#FEF7EA url(cover.jpg) center top/cover no-repeat;display:flex;flex-direction:column;justify-content:space-between;align-items:center;padding:calc(48px + env(safe-area-inset-top)) 24px calc(36px + env(safe-area-inset-bottom))}
+.cover h1{font-size:44px;color:#4A3417;text-shadow:0 1px 0 rgba(255,255,255,.6)}
+.cover p{color:#6B5230;margin-top:2px}
+.cover .btn{width:min(320px,100%);min-height:50px;font-size:17px;box-shadow:0 6px 18px rgba(74,52,23,.25)}
+.hero{text-align:center;padding:8px 0 2px}
+.hero img{height:150px;width:auto;display:block;margin:0 auto -6px}
 .authcard{min-height:296px;display:flex;flex-direction:column;justify-content:center}
 .authcard .seg{margin-bottom:auto}
 .authcard .btn.block{margin-top:auto}
@@ -43,7 +47,7 @@
 .bigcard .icons{display:flex;gap:12px;font-size:13px;margin:4px 0 8px}
 .bigcard .foot{display:flex;justify-content:space-between;align-items:flex-end;font-size:13px}
 .bigcard .pill{background:rgba(255,255,255,.6);color:var(--ink);border-radius:999px;padding:4px 12px;font-weight:500}
-.bigcard .cam{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;color:#6B5230}
+.bigcard .cam{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;color:#6B5230;border:0;z-index:2}
 .hscroll{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 calc(-1*var(--pad));padding:0 var(--pad) 4px}
 .hscroll .bigcard{flex:0 0 100%;scroll-snap-align:start}
 .hscroll::-webkit-scrollbar{display:none}
@@ -74,6 +78,7 @@
 .rows .rw:first-child{border-top:0}
 .rows .rw .v{color:var(--ink-2);font-size:14px}
 .ic{vertical-align:-3px;flex:none}
+.vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
 .fab{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));display:flex;justify-content:center;pointer-events:none;z-index:5}
 .fab .btn{pointer-events:auto;max-width:560px;width:calc(100% - 32px);box-shadow:0 4px 14px rgba(58,36,21,.12)}
 .fab .card{pointer-events:auto;max-width:560px;width:calc(100% - 32px);margin:0;box-shadow:0 4px 14px rgba(58,36,21,.12)}
@@ -203,7 +208,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 .sheet{background:var(--bg);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;padding:16px var(--pad) calc(24px + env(safe-area-inset-bottom))}
 .sheet .grip{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 12px}
 .sheet h2{margin-bottom:12px}
-.field .photobox,.photobox{display:grid!important;place-items:center;width:100%;aspect-ratio:1/1;height:auto;margin:0;font-size:14px;border:2px dashed var(--line);border-radius:14px;background:var(--card);color:var(--ink-2);cursor:pointer;overflow:hidden;position:relative}
+.field .photobox,.photobox{cursor:pointer;display:grid!important;place-items:center;width:100%;aspect-ratio:1/1;height:auto;margin:0;font-size:14px;border:2px dashed var(--line);border-radius:14px;background:var(--card);color:var(--ink-2);cursor:pointer;overflow:hidden;position:relative}
 .photobox img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
 .photobox.has img{display:block}
 .photobox.has .ph{display:none}
@@ -234,7 +239,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='3.7';
+const VERSION='4.0';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -248,7 +253,7 @@ const STATUS={requested:'รับฝาก',searching:'กำลังตาม
 const FLOW=['requested','searching','found','packed','delivered'];
 const CATS=['ของกิน','เครื่องสำอาง','เสื้อผ้า','ของใช้','ยา/วิตามิน'];
 const ICON='icon-192.png';
-const HERO='';
+const HERO='toast-hero.jpg';
 const IC={
  search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
  camera:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
@@ -347,7 +352,7 @@ const EN=[
 ["ดูมุมของเพื่อน","See what friends see"],["ดูหน้าแบบผู้ฝาก","See what friends see"],["หน้าแรก","Home"],["ตั้งค่า","Settings"],["แก้ไข","Edit"],["กลับ","Back"],["เสร็จ","Done"],["เลือก","Select"],["ลบออกจากรายการแล้ว","Removed from your list"],["ลบแล้ว","Removed"],["ลบไม่ได้","Couldn't delete"],["ต้องอัปเดต Rules ก่อน","update the rules first"],["ลบ","Remove"],["เพิ่ม","Add"],["ไป","Go"],
 ["ได้ของแล้ว","Delivered"],["ได้ลิงค์จากเพื่อนมา?","Got a link?"],["วางลิงค์","Paste link"],["ส่งแล้ว","Delivered"],["ส่งให้แล้ว","Shared"],["ใส่ตำแหน่งปัจจุบันแล้ว","Pinned your current spot"],["ขอตำแหน่งไม่ได้","Couldn't get your location"],["กำลังเปิดกระเป๋า…","Opening bag…"],
 ["โหมดตัวอย่าง","Demo mode"],["โหมดทดลองในเครื่อง","Local test mode"],["เชื่อมต่อ Firebase","Online"],["ใส่ข้อมูลจำลองแล้ว","Demo data added"],["เร็ว ๆ นี้","coming soon"],
-["กม.","km"],["คน","people"],["วัน","days"],["ฉัน","Me"],["แล้ว",""],["ไทย","ไทย"]
+["กม.","km"],["คน","people"],["วัน","days"],["ฉัน","Me"],["แล้ว",""],["เริ่มกันเลย","Let's go"],["ไทย","ไทย"]
 ];
 const EN_MAP=EN.filter(x=>x[0]).sort((a,b)=>b[0].length-a[0].length);
 function tr(s){if(LANG!=='en'||typeof s!=='string')return s;let out=s;for(const [th,en] of EN_MAP){if(out.includes(th))out=out.split(th).join(en);}return out;}
@@ -390,7 +395,7 @@ const S={tripId:Q.get('t'),role:Q.get('r')?'requester':null,trip:null,items:[],t
 document.documentElement.dataset.theme=LS('toast:theme')||'tangerine';
 function applyMode(){const m=LS('toast:mode')||'auto';const dark=m==='dark'||(m==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.mode=dark?'dark':'light';const mt=$('meta[name=theme-color]');if(mt)mt.content=dark?'#1E1A14':(document.documentElement.dataset.theme==='matcha'?'#C5E1A5':'#FFC46B')}
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyMode);
-const LANG=LS('toast:lang')||'th';document.documentElement.dataset.lang=LANG;document.documentElement.lang=LANG;
+let LANG=LS('toast:lang')||'th';document.documentElement.dataset.lang=LANG;document.documentElement.lang=LANG;
 
 const $=(s,el=document)=>el.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -408,6 +413,7 @@ function authMsg(e){return AUTH_ERR[e.code]||('ผิดพลาด: '+(e.code|
 function currentUser(){ if(AUTH)return AUTH.currentUser; const u=LS('toast:localUser');return u; }
 async function boot(){
   applyMode();
+  if(!S.tripId&&!LS('toast:coverSeen')&&!DEMO){await showCover();}
   if(DEMO){S.user={uid:'demo',email:'demo@toast.app',displayName:LS('toast:demoName')||'Tidatip'};}
   else{
     const last=LS('toast:lastUser');
@@ -438,6 +444,7 @@ async function boot(){
   S.unsub=store.watchItems(S.tripId,items=>{S.items=items;render()});
   render();
 }
+function showCover(){return new Promise(res=>{const d=document.createElement('div');d.className='cover';d.innerHTML=`<div style="text-align:center"><h1>Toast</h1><p>${tr('หิ้วของกลับมาให้ถึงมือ')}</p></div><button class="btn">${tr('เริ่มกันเลย')}</button>`;document.body.appendChild(d);d.querySelector('button').onclick=()=>{LS('toast:coverSeen',1);d.remove();res()}})}
 async function doAuth(mode){
   if(!DEMO){const ok=await fbReady;if(!ok){toast('โหลด Firebase ไม่ได้ ลองใหม่อีกที');return}}
   const uname=$('#aUser').value.trim().toLowerCase(),pw=$('#aPw').value;
@@ -476,7 +483,7 @@ function shell(body,tabs){
   ${tabs||''}`);
 }
 
-let homeTab=LS('toast:homeTab')||'bags';
+let homeTab='bags';
 let myTripsCache=null,itemCounts={},bagFilter='future';
 const dfmt=d=>d?(LANG==='en'?new Date(d+'T00:00').toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'}):new Date(d+'T00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'})):'';
 const greet=()=>{const hr=new Date().getHours();return hr<12?'สวัสดีตอนเช้า':hr<17?'สวัสดีตอนบ่าย':'สวัสดีตอนเย็น'};
@@ -493,7 +500,7 @@ function homeTabs(){
 async function renderLanding(err){
   document.body.classList.add('landing');document.body.classList.remove('login');
   const linkCard=`<div class="card"><h3>ได้ลิงค์จากเพื่อนมา?</h3><div class="row" style="margin-top:8px"><input id="tLink" placeholder="วางลิงค์" style="padding:7px 12px;border:1.5px solid var(--line);border-radius:12px;height:38px;background:var(--card)"><button class="btn ghost sm" style="flex:0" onclick="openLink()">ไป</button></div></div>`;
-  if(!S.user){ document.body.classList.add('login'); shell(`<div class="hero"><h1>Toast</h1><p class="muted">หิ้วของกลับมาให้ถึงมือ</p></div>${err?`<div class="card" style="border-color:#FCA5A5">${esc(err)}</div>`:''}`+authCard()); return; }
+  if(!S.user){ document.body.classList.add('login'); shell(`<div class="hero"><img src="${HERO}" alt=""><h1>Toast</h1><p class="muted">หิ้วของกลับมาให้ถึงมือ</p></div>${err?`<div class="card" style="border-color:#FCA5A5">${esc(err)}</div>`:''}`+authCard()); return; }
   const ck='toast:cache:'+S.user.uid;
   if(myTripsCache===null){
     const c=LS(ck);
@@ -538,7 +545,7 @@ function bagsView(err,linkCard){
   const undated=open.filter(t=>!t.recv&&!now.includes(t));
   const big=t=>{const its=itemCounts[t.id]||[];const ppl=new Set(its.map(i=>i.requester)).size;const found=its.filter(i=>['found','packed','delivered'].includes(i.status)).length;const spent=its.filter(i=>['found','packed','delivered'].includes(i.status)).reduce((a,i)=>a+(Number(i.paid||i.price)||0)*(Number(i.qty)||1),0);const cover=LS('toast:cover:'+t.id);
     return `<div class="bigcard ${cover?'hasphoto':''}" style="${cover?`background-image:url(${cover})`:''}" onclick="location.href='?t=${t.id}'">
-      <label class="cam" onclick="event.stopPropagation()" aria-label="เปลี่ยนรูปพื้นหลัง">${ic('camera',18)}<input type="file" accept="image/*" hidden onchange="pickCover(this,'${t.id}')"></label>
+      <button type="button" class="cam" onclick="event.stopPropagation();document.getElementById('cov-${t.id}').click()" aria-label="เปลี่ยนรูปพื้นหลัง">${ic('camera',18)}</button><input id="cov-${t.id}" class="vh" type="file" accept="image/*" onclick="event.stopPropagation()" onchange="event.stopPropagation();pickCover(this,'${t.id}')">
       <div class="name">${esc(t.name)}</div>
       <div class="sub">${t.recv?'รับของ '+dfmt(t.recv):'ยังไม่ระบุวันรับของ'}${t.close?' · ปิดรับฝาก '+dfmt(t.close):''} · ${esc(t.currency||'THB')}</div>
       <div class="icons"><span>${ic('users',15)} ${ppl} คน</span><span>${ic('bag',15)} ${its.length} รายการ</span><span>${ic('check',15)} ${found} เจอแล้ว</span></div>
@@ -611,12 +618,12 @@ function goodsThb(i,t){t=t||S.trip;return (Number(i.paid||i.price)||0)*(Number(i
 function profileView(){
   const av=LS('toast:avatar');const uname=(S.user.email||'').split('@')[0];
   const th=document.documentElement.dataset.theme,mode=LS('toast:mode')||'auto';
-  const seg=(opts,curv,fn)=>`<div class="seg" style="margin:0;flex:none">${opts.map(([k,l])=>`<button class="${curv===k?'on':''}" onclick="${fn}('${k}')">${l}</button>`).join('')}</div>`;
+  const seg=(opts,curv,fn)=>`<div class="seg3" style="margin:0;flex:none;min-width:150px">${opts.map(([k,l])=>`<button class="${curv===k?'on':''}" onclick="${fn}('${k}')">${l}</button>`).join('')}</div>`;
   const pal=(k,l,c1,c2,c3)=>`<button class="palbtn ${th===k?'on':''}" onclick="setThemeP('${k}')"><span class="dots"><i style="background:${c1}"></i><i style="background:${c2}"></i><i style="background:${c3}"></i></span>${l}</button>`;
   return `<h1 style="font-size:32px;color:var(--accent-deep);margin:6px 0 14px">โปรไฟล์</h1>
    <div class="card" style="display:flex;gap:16px;align-items:center">
-     <label for="avIn" style="width:84px;height:84px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;color:var(--accent-deep);overflow:hidden;position:relative;flex:none;cursor:pointer">${av?`<img src="${av}" alt="" style="width:100%;height:100%;object-fit:cover">`:ic('user',38)}<span style="position:absolute;right:2px;bottom:2px;width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:var(--on-accent)">${ic('camera',15)}</span></label>
-     <input id="avIn" type="file" accept="image/*" hidden>
+     <button type="button" onclick="document.getElementById('avIn').click()" style="border:0;padding:0;width:84px;height:84px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;color:var(--accent-deep);overflow:hidden;position:relative;flex:none;cursor:pointer">${av?`<img src="${av}" alt="" style="width:100%;height:100%;object-fit:cover">`:ic('user',38)}<span style="position:absolute;right:2px;bottom:2px;width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:var(--on-accent)">${ic('camera',15)}</span></button>
+     <input id="avIn" class="vh" type="file" accept="image/*">
      <div style="flex:1;min-width:0"><div class="field" style="margin:0"><label>ชื่อที่เพื่อนจะเห็น</label><input id="nmIn" value="${esc(S.user.displayName||'')}" onchange="saveName()"></div><div class="muted" style="font-size:12px;margin-top:4px">ไอดี @${esc(uname)} · ให้เพื่อนใช้เพิ่มคุณ</div></div>
    </div>
    <div class="card">
@@ -647,7 +654,7 @@ async function saveName(){const n=$('#nmIn').value.trim();if(!n)return toast('�
 function pickAvatar(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');const s=Math.min(1,256/Math.max(im.width,im.height));c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);LS('toast:avatar',c.toDataURL('image/jpeg',.8));renderLanding()};im.src=r.result};r.readAsDataURL(f)}
 function optSheet(title,opts,cur,fn){sheet(`<h2>${title}</h2>${opts.map(([k,l,note])=>`<label class="radio" onclick="${fn}('${k}')"><input type="radio" ${cur===k?'checked':''}><span><b>${l}</b>${note?`<span class="muted">${note}</span>`:''}</span></label>`).join('')}`)}
 function pickLang(){optSheet('ภาษา',[['th','ไทย'],['en','English','เร็ว ๆ นี้']],LANG,'setLang')}
-function setLang(l){LS('toast:lang',l);location.reload()}
+function setLang(l){LANG=l;LS('toast:lang',l);document.documentElement.dataset.lang=l;document.documentElement.lang=l;if(S.trip)render();else renderLanding()}
 function pickPalette(){optSheet('พาเลต',[['tangerine','Tangerine'],['matcha','Matcha']],document.documentElement.dataset.theme,'setThemeP')}
 function setThemeP(t){setTheme(t);closeSheet();renderLanding()}
 function pickMode(){optSheet('ธีม',[['light','สว่าง'],['dark','มืด'],['auto','ตามเครื่อง']],LS('toast:mode')||'auto','setMode')}
@@ -810,7 +817,7 @@ function openItemForm(){
   const asShopper=S.role==='shopper';
   sheet(`<h2>ฝากซื้อของ</h2>
    ${asShopper?`<div class="field"><label>ชื่อผู้ฝาก</label><input id="fWho" placeholder="เพื่อนคนไหน"></div>`:''}
-   <div class="field"><label>รูปสินค้า</label><label class="photobox" id="fBox"><img id="fImg" alt=""><span class="ph">${ic('camera',28)}เพิ่มรูปสินค้า</span><input type="file" accept="image/*" hidden onchange="pickPhoto(this,'fImg','main')"></label></div>
+   <div class="field"><label>รูปสินค้า</label><div class="photobox" id="fBox" onclick="document.getElementById('fFile').click()"><img id="fImg" alt=""><span class="ph">${ic('camera',28)}เพิ่มรูปสินค้า</span></div><input id="fFile" class="vh" type="file" accept="image/*" onchange="pickPhoto(this,'fImg','main')"></div>
    <div class="field"><label>ชื่อสินค้า</label><input id="fName" placeholder="เช่น Kit Kat รสชาเขียว"></div>
    <div class="row"><div class="field"><label>ราคาที่เห็น (${cur()})</label><input id="fPrice" inputmode="decimal" oninput="approx('fPrice','aPrice')"><div class="approx" id="aPrice" style="margin:2px 0 0"></div></div><div class="field"><label>จำนวน</label><input id="fQty" inputmode="numeric" value="1"></div></div>
    ${S.trip&&S.trip.fee&&S.trip.fee.type==='perKg'?`<div class="field"><label>น้ำหนักโดยประมาณ (กก.)</label><input id="fWeight" inputmode="decimal" placeholder="เช่น 1.5"></div>`:''}
@@ -825,7 +832,7 @@ function openItemForm(){
    </div>
    <div id="subBox" class="hidden card">
      <h3>ของทดแทน</h3>
-     <div class="field"><label>รูป</label><label class="photobox" id="sBox"><img id="sImg" alt=""><span class="ph">${ic('camera',24)}เพิ่มรูป</span><input type="file" accept="image/*" hidden onchange="pickPhoto(this,'sImg','sub')"></label></div>
+     <div class="field"><label>รูป</label><div class="photobox" id="sBox" onclick="document.getElementById('sFile').click()"><img id="sImg" alt=""><span class="ph">${ic('camera',24)}เพิ่มรูป</span></div><input id="sFile" class="vh" type="file" accept="image/*" onchange="pickPhoto(this,'sImg','sub')"></div>
      <div class="field"><label>ชื่อสินค้า</label><input id="sName"></div>
      <div class="row"><div class="field"><label>ราคา (${cur()})</label><input id="sPrice" inputmode="decimal" oninput="approx('sPrice','aSPrice')"><div class="approx" id="aSPrice" style="margin:2px 0 0"></div></div><div class="field"><label>จำนวน</label><input id="sQty" inputmode="numeric" value="1"></div></div>
      <div class="field"><label>รายละเอียด</label><textarea id="sDetail"></textarea></div>

@@ -1,5 +1,5 @@
-const CACHE='toast-v3.1';
-const ASSETS=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png','./bg-app.jpg','./bg-login.jpg'];
+const CACHE='toast-v4.0';
+const ASSETS=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png','./cover.jpg','./toast-hero.jpg'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>Promise.all(ASSETS.map(a=>c.add(a).catch(()=>{})))))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
 self.addEventListener('message',e=>{if(e.data==='SKIP_WAITING')self.skipWaiting()});
