@@ -266,7 +266,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='5.5';
+const VERSION='5.6';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -320,6 +320,7 @@ async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncod
 const Q=new URLSearchParams(location.search);
 const REQPREVIEW=/requester/.test(location.pathname);
 const EN=[
+["ฝากซื้อเลย","Get this for me"],
 ["ปิดกระเป๋าแล้ว แก้ไขรายการเองไม่ได้ ถ้าต้องเปลี่ยนอะไร ทัก","Requests are closed — you can't edit this yourself. Message"],
 ["ตรงได้เลย","directly if anything needs to change"],
 ["แก้ไขรายการนี้","Edit this item"],
@@ -1193,7 +1194,7 @@ function openItemForm(edit){
      <div class="field"><label>รายละเอียด</label><textarea id="sDetail">${edit&&edit.substitute?esc(edit.substitute.detail||''):''}</textarea></div>
      <div class="field"><label>ร้านค้า</label><input id="sShop" value="${edit&&edit.substitute?esc(edit.substitute.shop||''):''}"></div>
    </div>
-   <button class="btn block" onclick="saveItem()">${editingId?'บันทึกการแก้ไข':'ของที่ฝาก'}</button>`);
+   <button class="btn block" onclick="saveItem()">${editingId?'บันทึกการแก้ไข':'ฝากซื้อเลย'}</button>`);
 }
 function fbUI(v){$('#subBox').classList.toggle('hidden',v!=='substitute');$('#contactBox').classList.toggle('hidden',v!=='contact')}
 function pickCat(b){[...b.parentNode.children].forEach(x=>x.classList.remove('on'));b.classList.add('on');wUI()}
@@ -1246,8 +1247,8 @@ function openItem(id){
    ${i.paid?`<p class="muted">จ่ายจริง ${money(i.paid)}</p>`:''}
    ${i.note?`<p class="muted">ข้อความจากคนช็อปให้: ${esc(i.note)}</p>`:''}
    <ul class="timeline">${(i.log||[]).map(l=>`<li>${STATUS[l.s]} · ${new Date(l.at).toLocaleString(LANG==='en'?'en-US':'th-TH',LANG==='en'?{month:'short',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}:{dateStyle:'short',timeStyle:'short'})}</li>`).join('')}</ul>
-   ${isShopper&&!off&&next?`<div style="margin-top:14px">${['requested','searching'].includes(i.status)?`<div class="field"><label>ราคาที่ซื้อจริง (${cur()}) — ใส่หรือไม่ก็ได้</label><input id="uPaid" inputmode="decimal" value="${i.paid||''}" oninput="approx('uPaid','aPaid')"><div class="approx" id="aPaid" style="margin:2px 0 0"></div></div>`:''}<button class="btn block" onclick="setStatus('${i.id}','${next}')">→ ${STATUS[next]}</button></div>`:''}
-   ${isShopper&&!off?`<div class="row" style="margin-top:8px"><button class="btn danger" onclick="setStatus('${i.id}','notfound')">หาไม่ได้</button><button class="btn ghost" onclick="setStatus('${i.id}','cancelled')">ยกเลิก</button></div>`:''}
+   ${isShopper&&!off&&next?`<div style="margin-top:14px">${['requested','searching'].includes(i.status)?`<div class="field"><label>ราคาที่ซื้อจริง (${cur()}) — ใส่หรือไม่ก็ได้</label><input id="uPaid" inputmode="decimal" value="${i.paid||''}" oninput="approx('uPaid','aPaid')"><div class="approx" id="aPaid" style="margin:2px 0 0"></div></div>`:''}<button class="btn block" onclick="setStatus('${i.id}','${next}')">${STATUS[next]}</button></div>`:''}
+   ${isShopper&&!off?`<button class="btn danger block" style="margin-top:8px" onclick="setStatus('${i.id}','notfound')">หาไม่เจอจริง ๆ</button><button class="btn ghost block" style="margin-top:8px" onclick="setStatus('${i.id}','cancelled')">ยกเลิก</button>`:''}
    ${isShopper&&off?`<button class="btn ghost block" style="margin-top:8px" onclick="setStatus('${i.id}','requested')">เอากลับมาใหม่</button>`:''}
    ${isShopper?`<button class="btn ghost block sm" style="margin-top:8px" onclick="closeSheet();openItemForm(S.items.find(x=>x.id==='${i.id}'))">แก้ไขรายการนี้</button><button class="btn ghost block sm" style="margin-top:8px" onclick="editItemFee('${i.id}')">ปรับค่าฝากซื้อชิ้นนี้</button>`:''}
    ${isShopper&&(off||i.status==='delivered')?`<button class="btn danger block" style="margin-top:8px" onclick="delItem('${i.id}')">ลบรายการนี้ถาวร</button>`:''}
