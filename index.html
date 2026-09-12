@@ -266,7 +266,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='5.4';
+const VERSION='5.5';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -320,6 +320,12 @@ async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncod
 const Q=new URLSearchParams(location.search);
 const REQPREVIEW=/requester/.test(location.pathname);
 const EN=[
+["ปิดกระเป๋าแล้ว แก้ไขรายการเองไม่ได้ ถ้าต้องเปลี่ยนอะไร ทัก","Requests are closed — you can't edit this yourself. Message"],
+["ตรงได้เลย","directly if anything needs to change"],
+["แก้ไขรายการนี้","Edit this item"],
+["แก้ไขรายการ","Edit item"],
+["บันทึกการแก้ไข","Save changes"],
+["แก้ไขแล้ว","Updated"],
 ["ใส่ชื่อของสำรองด้วยนะ","Add the backup item's name too"],
 ["ยังไม่ได้ระบุของสำรอง ทักถามเจ้าของรายการก่อนนะ","No backup was specified — check with them first"],
 ["ใส่ของให้เพื่อน","Add for a friend"],
@@ -1158,33 +1164,36 @@ function bindSheetDrag(){const s=$('.sheet'),g=$('.sheet .grip');if(!s||!g)retur
 function closeSheet(){$('#sheetRoot').innerHTML=''}
 
 let photoData='',subPhotoData='';
-function openItemForm(){
-  photoData='';subPhotoData='';setTimeout(wUI,30);
+let editingId=null;
+function openItemForm(edit){
+  editingId=(edit&&edit.id)||null;
+  photoData=(edit&&edit.photo)||'';subPhotoData=(edit&&edit.substitute&&edit.substitute.photo)||'';
+  setTimeout(()=>{wUI();if(edit){const b=$('#fBox'),sb=$('#sBox');if(photoData&&b){$('#fImg').src=photoData;b.classList.add('has')}if(subPhotoData&&sb){$('#sImg').src=subPhotoData;sb.classList.add('has')}[...document.querySelectorAll('#fCatPick .chip')].forEach(c=>c.classList.toggle('on',c.textContent.trim()===(edit.cat||'').trim()));const r=document.querySelector(`input[name=fb][value="${edit.fallback||'contact'}"]`);if(r){r.checked=true;fbUI(edit.fallback||'contact')}}},30);
   const asShopper=S.role==='shopper';
-  sheet(`<h2>${asShopper?'ใส่ของให้เพื่อน':'ฝากซื้อของ'}</h2>
+  sheet(`<h2>${editingId?'แก้ไขรายการ':(asShopper?'ใส่ของให้เพื่อน':'ฝากซื้อของ')}</h2>
    ${asShopper?`<div class="field"><label>ชื่อผู้ฝาก</label><input id="fWho" placeholder="เพื่อนคนไหน"></div>`:''}
    <div class="field"><label>รูปสินค้า</label><div class="photobox" id="fBox" onclick="document.getElementById('fFile').click()"><img id="fImg" alt=""><span class="ph">${ic('camera',28)}แตะใส่รูปของที่อยากได้</span></div><input id="fFile" class="vh" type="file" accept="image/*" onchange="pickPhoto(this,'fImg','main')"></div>
-   <div class="field"><label>ชื่อสินค้า</label><input id="fName" placeholder="เช่น Kit Kat รสชาเขียว"></div>
-   <div class="row"><div class="field"><label>ราคาที่เห็น (${cur()})</label><input id="fPrice" inputmode="decimal" oninput="approx('fPrice','aPrice')"><div class="approx" id="aPrice" style="margin:2px 0 0"></div></div><div class="field"><label>จำนวน</label><input id="fQty" inputmode="numeric" value="1"></div></div>
-   <div class="field hidden" id="wBox"><label>น้ำหนักโดยประมาณ (กก.)</label><input id="fWeight" inputmode="decimal" placeholder="เช่น 1.5"></div>
-   <div class="field"><label>งบไม่เกิน (${cur()}) ถ้าราคาต่างจากที่เห็น</label><input id="fBudget" inputmode="decimal" placeholder="เว้นว่างได้" oninput="approx('fBudget','aBudget')"><div class="approx" id="aBudget" style="margin:2px 0 0"></div></div>
+   <div class="field"><label>ชื่อสินค้า</label><input id="fName" value="${edit?esc(edit.name||''):''}" placeholder="เช่น Kit Kat รสชาเขียว"></div>
+   <div class="row"><div class="field"><label>ราคาที่เห็น (${cur()})</label><input id="fPrice" inputmode="decimal" value="${edit?(edit.price||''):''}" oninput="approx('fPrice','aPrice')"><div class="approx" id="aPrice" style="margin:2px 0 0"></div></div><div class="field"><label>จำนวน</label><input id="fQty" inputmode="numeric" value="${edit?(edit.qty||1):1}"></div></div>
+   <div class="field hidden" id="wBox"><label>น้ำหนักโดยประมาณ (กก.)</label><input id="fWeight" inputmode="decimal" value="${edit?(edit.weight||''):''}" placeholder="เช่น 1.5"></div>
+   <div class="field"><label>งบไม่เกิน (${cur()}) ถ้าราคาต่างจากที่เห็น</label><input id="fBudget" inputmode="decimal" value="${edit?(edit.budget||''):''}" placeholder="เว้นว่างได้" oninput="approx('fBudget','aBudget')"><div class="approx" id="aBudget" style="margin:2px 0 0"></div></div>
    <div class="field"><label>ประเภท</label><div class="catpick" id="fCatPick">${catsOpen().map((c,i)=>`<button type="button" class="chip ${i===0?'on':''}" onclick="pickCat(this)">${c}</button>`).join('')}</div></div>
-   <div class="field"><label>รายละเอียดเพิ่มเติม</label><textarea id="fDetail" placeholder="สี ไซซ์ รุ่น หรือรายละเอียดที่อยากกำชับ"></textarea></div>
-   <div class="field"><label>ร้านค้า</label><input id="fShop" placeholder="ชื่อร้าน / สาขา"></div>
-   <div class="field"><label>ตำแหน่งร้าน</label><div class="row"><input id="fLoc" placeholder="วางลิงค์ Google Maps"><button class="btn ghost sm" onclick="useHere()">ตรงนี้</button></div></div>
+   <div class="field"><label>รายละเอียดเพิ่มเติม</label><textarea id="fDetail" placeholder="สี ไซซ์ รุ่น หรือรายละเอียดที่อยากกำชับ">${edit?esc(edit.detail||''):''}</textarea></div>
+   <div class="field"><label>ร้านค้า</label><input id="fShop" value="${edit?esc(edit.shop||''):''}" placeholder="ชื่อร้าน / สาขา"></div>
+   <div class="field"><label>ตำแหน่งร้าน</label><div class="row"><input id="fLoc" value="${edit?esc(edit.mapUrl||''):''}" placeholder="วางลิงค์ Google Maps"><button class="btn ghost sm" onclick="useHere()">ตรงนี้</button></div></div>
    <h3 style="margin:14px 0 8px">ถ้าหาไม่เจอ เอายังไงดี</h3>
    <div class="opts">
-   ${Object.entries(FALLBACK).map(([k,v],i)=>`<label class="opt"><input type="radio" name="fb" value="${k}" ${i===1?'checked':''} onchange="fbUI(this.value)"><span class="ring">${ic('check',14)}</span><span class="lbl">${v}</span></label>${k==='contact'?`<div class="optsub" id="contactBox"><div class="field" style="margin:0"><label>ทักฉันได้ที่ (LINE / โทร) — ไม่บังคับ</label><input id="fContact" placeholder="เช่น LINE: namwan99" value="${esc(LS('toast:contact')||'')}"></div></div>`:''}`).join('')}
+   ${Object.entries(FALLBACK).map(([k,v],i)=>`<label class="opt"><input type="radio" name="fb" value="${k}" ${i===1?'checked':''} onchange="fbUI(this.value)"><span class="ring">${ic('check',14)}</span><span class="lbl">${v}</span></label>${k==='contact'?`<div class="optsub" id="contactBox"><div class="field" style="margin:0"><label>ทักฉันได้ที่ (LINE / โทร) — ไม่บังคับ</label><input id="fContact" placeholder="เช่น LINE: namwan99" value="${esc((edit&&edit.contact)||LS('toast:contact')||'')}"></div></div>`:''}`).join('')}
    </div>
    <div id="subBox" class="hidden card">
      <h3>ของทดแทน</h3>
      <div class="field"><label>รูป</label><div class="photobox" id="sBox" onclick="document.getElementById('sFile').click()"><img id="sImg" alt=""><span class="ph">${ic('camera',24)}เพิ่มรูป</span></div><input id="sFile" class="vh" type="file" accept="image/*" onchange="pickPhoto(this,'sImg','sub')"></div>
-     <div class="field"><label>ชื่อสินค้า</label><input id="sName"></div>
-     <div class="row"><div class="field"><label>ราคา (${cur()})</label><input id="sPrice" inputmode="decimal" oninput="approx('sPrice','aSPrice')"><div class="approx" id="aSPrice" style="margin:2px 0 0"></div></div><div class="field"><label>จำนวน</label><input id="sQty" inputmode="numeric" value="1"></div></div>
-     <div class="field"><label>รายละเอียด</label><textarea id="sDetail"></textarea></div>
-     <div class="field"><label>ร้านค้า</label><input id="sShop"></div>
+     <div class="field"><label>ชื่อสินค้า</label><input id="sName" value="${edit&&edit.substitute?esc(edit.substitute.name||''):''}"></div>
+     <div class="row"><div class="field"><label>ราคา (${cur()})</label><input id="sPrice" inputmode="decimal" value="${edit&&edit.substitute?(edit.substitute.price||''):''}" oninput="approx('sPrice','aSPrice')"><div class="approx" id="aSPrice" style="margin:2px 0 0"></div></div><div class="field"><label>จำนวน</label><input id="sQty" inputmode="numeric" value="${edit&&edit.substitute?(edit.substitute.qty||1):1}"></div></div>
+     <div class="field"><label>รายละเอียด</label><textarea id="sDetail">${edit&&edit.substitute?esc(edit.substitute.detail||''):''}</textarea></div>
+     <div class="field"><label>ร้านค้า</label><input id="sShop" value="${edit&&edit.substitute?esc(edit.substitute.shop||''):''}"></div>
    </div>
-   <button class="btn block" onclick="saveItem()">ของที่ฝาก</button>`);
+   <button class="btn block" onclick="saveItem()">${editingId?'บันทึกการแก้ไข':'ของที่ฝาก'}</button>`);
 }
 function fbUI(v){$('#subBox').classList.toggle('hidden',v!=='substitute');$('#contactBox').classList.toggle('hidden',v!=='contact')}
 function pickCat(b){[...b.parentNode.children].forEach(x=>x.classList.remove('on'));b.classList.add('on');wUI()}
@@ -1213,7 +1222,8 @@ async function saveItem(){
   const contact=$('#fContact').value.trim();if(contact)LS('toast:contact',contact);
   const it={id:uid(8),requester:who,name,photo:photoData,price:+$('#fPrice').value||null,budget:+$('#fBudget').value||null,qty:+$('#fQty').value||1,weight:$('#fWeight')?(+$('#fWeight').value||null):null,cat:($('#fCatPick .on')||{}).textContent||cats()[0],detail:$('#fDetail').value.trim(),shop:$('#fShop').value.trim(),lat:loc.lat??null,lng:loc.lng??null,mapUrl:loc.mapUrl||'',fallback:fb,contact:contact||'',rid:S.role==='requester'?S.rid:'',requesterUid:(S.role==='requester'&&S.user)?S.user.uid:'',status:'requested',log:[{s:'requested',at:Date.now()}]};
   if(fb==='substitute')it.substitute={name:$('#sName').value.trim(),photo:subPhotoData,price:+$('#sPrice').value||null,qty:+$('#sQty').value||1,detail:$('#sDetail').value.trim(),shop:$('#sShop').value.trim()};
-  await store.addItem(S.tripId,it);closeSheet();toast('ใส่กระเป๋าแล้ว!');
+  if(editingId){const p2=Object.assign({},it);delete p2.id;delete p2.createdAt;delete p2.status;delete p2.log;delete p2.rid;delete p2.requesterUid;await store.updateItem(S.tripId,editingId,p2);editingId=null;closeSheet();toast('แก้ไขแล้ว');}
+  else{await store.addItem(S.tripId,it);closeSheet();toast('ใส่กระเป๋าแล้ว!');}
 }
 
 function openItem(id){
@@ -1239,9 +1249,9 @@ function openItem(id){
    ${isShopper&&!off&&next?`<div style="margin-top:14px">${['requested','searching'].includes(i.status)?`<div class="field"><label>ราคาที่ซื้อจริง (${cur()}) — ใส่หรือไม่ก็ได้</label><input id="uPaid" inputmode="decimal" value="${i.paid||''}" oninput="approx('uPaid','aPaid')"><div class="approx" id="aPaid" style="margin:2px 0 0"></div></div>`:''}<button class="btn block" onclick="setStatus('${i.id}','${next}')">→ ${STATUS[next]}</button></div>`:''}
    ${isShopper&&!off?`<div class="row" style="margin-top:8px"><button class="btn danger" onclick="setStatus('${i.id}','notfound')">หาไม่ได้</button><button class="btn ghost" onclick="setStatus('${i.id}','cancelled')">ยกเลิก</button></div>`:''}
    ${isShopper&&off?`<button class="btn ghost block" style="margin-top:8px" onclick="setStatus('${i.id}','requested')">เอากลับมาใหม่</button>`:''}
-   ${isShopper?`<button class="btn ghost block sm" style="margin-top:8px" onclick="editItemFee('${i.id}')">ปรับค่าฝากซื้อชิ้นนี้</button>`:''}
+   ${isShopper?`<button class="btn ghost block sm" style="margin-top:8px" onclick="closeSheet();openItemForm(S.items.find(x=>x.id==='${i.id}'))">แก้ไขรายการนี้</button><button class="btn ghost block sm" style="margin-top:8px" onclick="editItemFee('${i.id}')">ปรับค่าฝากซื้อชิ้นนี้</button>`:''}
    ${isShopper&&(off||i.status==='delivered')?`<button class="btn danger block" style="margin-top:8px" onclick="delItem('${i.id}')">ลบรายการนี้ถาวร</button>`:''}
-   ${!isShopper&&i.status==='requested'?`<button class="btn danger block" style="margin-top:14px" onclick="setStatus('${i.id}','cancelled')">ยกเลิกรายการนี้</button>`:''}
+   ${!isShopper&&i.status==='requested'&&!(S.trip.close&&S.trip.close<todayStr())?`<button class="btn block" style="margin-top:14px" onclick="closeSheet();openItemForm(S.items.find(x=>x.id==='${i.id}'))">แก้ไขรายการนี้</button><button class="btn danger block" style="margin-top:8px" onclick="setStatus('${i.id}','cancelled')">ยกเลิกของชิ้นนี้</button>`:''}${!isShopper&&i.status==='requested'&&S.trip.close&&S.trip.close<todayStr()?`<p class="muted" style="margin-top:14px;line-height:1.7">ปิดกระเป๋าแล้ว แก้ไขรายการเองไม่ได้ ถ้าต้องเปลี่ยนอะไร ทัก ${esc(S.trip.shopper)} ตรงได้เลย</p>`:''}
    ${!isShopper&&i.status!=='requested'?`<p class="muted" style="margin-top:12px">${esc(S.trip.shopper)} รับไว้แล้วนะ ถ้ามีอะไรเปลี่ยน ทักมาบอกได้เลย</p>`:''}`);
 }
 let ovType='perItem';
