@@ -266,7 +266,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='5.3';
+const VERSION='5.4';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -320,6 +320,8 @@ async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncod
 const Q=new URLSearchParams(location.search);
 const REQPREVIEW=/requester/.test(location.pathname);
 const EN=[
+["ใส่ชื่อของสำรองด้วยนะ","Add the backup item's name too"],
+["ยังไม่ได้ระบุของสำรอง ทักถามเจ้าของรายการก่อนนะ","No backup was specified — check with them first"],
 ["ใส่ของให้เพื่อน","Add for a friend"],
 ["เลื่อนซ้ายเพื่อลบกระเป๋า","Swipe left to delete a bag"],
 ["พิมพ์ชื่อกระเป๋าเพื่อยืนยัน","Type the bag name to confirm"],
@@ -1206,7 +1208,9 @@ async function saveItem(){
   const catSel=(($('#fCatPick .on')||{}).textContent)||cats()[0];
   if(feeRule({cat:catSel},S.trip).type==='perKg'&&!(+($('#fWeight')||{}).value)){toast('หมวดนี้คิดค่าฝากซื้อตามน้ำหนัก ใส่น้ำหนักด้วยนะ');return}
   const loc=parseLoc($('#fLoc').value)||{};
-  const fb=$('input[name=fb]:checked').value;const contact=$('#fContact').value.trim();if(contact)LS('toast:contact',contact);
+  const fb=$('input[name=fb]:checked').value;
+  if(fb==='substitute'&&!$('#sName').value.trim()){toast('ใส่ชื่อของสำรองด้วยนะ');return}
+  const contact=$('#fContact').value.trim();if(contact)LS('toast:contact',contact);
   const it={id:uid(8),requester:who,name,photo:photoData,price:+$('#fPrice').value||null,budget:+$('#fBudget').value||null,qty:+$('#fQty').value||1,weight:$('#fWeight')?(+$('#fWeight').value||null):null,cat:($('#fCatPick .on')||{}).textContent||cats()[0],detail:$('#fDetail').value.trim(),shop:$('#fShop').value.trim(),lat:loc.lat??null,lng:loc.lng??null,mapUrl:loc.mapUrl||'',fallback:fb,contact:contact||'',rid:S.role==='requester'?S.rid:'',requesterUid:(S.role==='requester'&&S.user)?S.user.uid:'',status:'requested',log:[{s:'requested',at:Date.now()}]};
   if(fb==='substitute')it.substitute={name:$('#sName').value.trim(),photo:subPhotoData,price:+$('#sPrice').value||null,qty:+$('#sQty').value||1,detail:$('#sDetail').value.trim(),shop:$('#sShop').value.trim()};
   await store.addItem(S.tripId,it);closeSheet();toast('ใส่กระเป๋าแล้ว!');
@@ -1216,7 +1220,7 @@ function openItem(id){
   const i=S.items.find(x=>x.id===id);if(!i)return;
   const isShopper=S.role==='shopper';const off=['cancelled','notfound'].includes(i.status);
   const next=FLOW[FLOW.indexOf(i.status)+1];
-  const sub=i.substitute&&i.substitute.name?`<div class="card"><h3>ของสำรอง</h3><div class="item">${i.substitute.photo?`<img class="thumb" src="${i.substitute.photo}">`:`<div class="thumb">${ic('swap',26)}</div>`}<div class="body"><div class="name">${esc(i.substitute.name)} <span class="muted">×${i.substitute.qty}</span></div><div class="meta">${i.substitute.price?money(i.substitute.price)+' · ':''}${esc(i.substitute.shop||'')}</div><div class="muted">${esc(i.substitute.detail||'')}</div></div></div></div>`:'';
+  const sub=(i.fallback==='substitute'&&!(i.substitute&&i.substitute.name))?`<div class="card" style="padding:10px 14px"><div style="font-weight:500">ของสำรอง</div><div class="muted">ยังไม่ได้ระบุของสำรอง ทักถามเจ้าของรายการก่อนนะ</div></div>`:i.substitute&&i.substitute.name?`<div class="card"><h3>ของสำรอง</h3><div class="item">${i.substitute.photo?`<img class="thumb" src="${i.substitute.photo}">`:`<div class="thumb">${ic('swap',26)}</div>`}<div class="body"><div class="name">${esc(i.substitute.name)} <span class="muted">×${i.substitute.qty}</span></div><div class="meta">${i.substitute.price?money(i.substitute.price)+' · ':''}${esc(i.substitute.shop||'')}</div><div class="muted">${esc(i.substitute.detail||'')}</div></div></div></div>`:'';
   sheet(`
    ${i.photo?`<img class="detail-img" src="${i.photo}" alt="">`:''}
    <h2>${esc(i.name)} <span class="muted">×${i.qty}</span></h2>
