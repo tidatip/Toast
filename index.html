@@ -266,7 +266,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='5.6';
+const VERSION='5.7';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -320,6 +320,7 @@ async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncod
 const Q=new URLSearchParams(location.search);
 const REQPREVIEW=/requester/.test(location.pathname);
 const EN=[
+["ปรับค่าฝากซื้อ","Adjust fee"],
 ["ฝากซื้อเลย","Get this for me"],
 ["ปิดกระเป๋าแล้ว แก้ไขรายการเองไม่ได้ ถ้าต้องเปลี่ยนอะไร ทัก","Requests are closed — you can't edit this yourself. Message"],
 ["ตรงได้เลย","directly if anything needs to change"],
@@ -1248,10 +1249,11 @@ function openItem(id){
    ${i.note?`<p class="muted">ข้อความจากคนช็อปให้: ${esc(i.note)}</p>`:''}
    <ul class="timeline">${(i.log||[]).map(l=>`<li>${STATUS[l.s]} · ${new Date(l.at).toLocaleString(LANG==='en'?'en-US':'th-TH',LANG==='en'?{month:'short',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}:{dateStyle:'short',timeStyle:'short'})}</li>`).join('')}</ul>
    ${isShopper&&!off&&next?`<div style="margin-top:14px">${['requested','searching'].includes(i.status)?`<div class="field"><label>ราคาที่ซื้อจริง (${cur()}) — ใส่หรือไม่ก็ได้</label><input id="uPaid" inputmode="decimal" value="${i.paid||''}" oninput="approx('uPaid','aPaid')"><div class="approx" id="aPaid" style="margin:2px 0 0"></div></div>`:''}<button class="btn block" onclick="setStatus('${i.id}','${next}')">${STATUS[next]}</button></div>`:''}
-   ${isShopper&&!off?`<button class="btn danger block" style="margin-top:8px" onclick="setStatus('${i.id}','notfound')">หาไม่เจอจริง ๆ</button><button class="btn ghost block" style="margin-top:8px" onclick="setStatus('${i.id}','cancelled')">ยกเลิก</button>`:''}
+   ${isShopper?`<div class="row" style="margin-top:10px"><button class="btn ghost sm" style="flex:1" onclick="editItemFee('${i.id}')">ปรับค่าฝากซื้อ</button><button class="btn ghost sm" style="flex:1" onclick="closeSheet();openItemForm(S.items.find(x=>x.id==='${i.id}'))">แก้ไขรายการนี้</button></div>`:''}
+   ${isShopper&&!off?`<div class="row" style="margin-top:8px"><button class="btn danger sm" style="flex:1" onclick="setStatus('${i.id}','notfound')">หาไม่เจอจริง ๆ</button><button class="btn ghost sm" style="flex:1" onclick="setStatus('${i.id}','cancelled')">ยกเลิก</button></div>`:''}
    ${isShopper&&off?`<button class="btn ghost block" style="margin-top:8px" onclick="setStatus('${i.id}','requested')">เอากลับมาใหม่</button>`:''}
-   ${isShopper?`<button class="btn ghost block sm" style="margin-top:8px" onclick="closeSheet();openItemForm(S.items.find(x=>x.id==='${i.id}'))">แก้ไขรายการนี้</button><button class="btn ghost block sm" style="margin-top:8px" onclick="editItemFee('${i.id}')">ปรับค่าฝากซื้อชิ้นนี้</button>`:''}
    ${isShopper&&(off||i.status==='delivered')?`<button class="btn danger block" style="margin-top:8px" onclick="delItem('${i.id}')">ลบรายการนี้ถาวร</button>`:''}
+
    ${!isShopper&&i.status==='requested'&&!(S.trip.close&&S.trip.close<todayStr())?`<button class="btn block" style="margin-top:14px" onclick="closeSheet();openItemForm(S.items.find(x=>x.id==='${i.id}'))">แก้ไขรายการนี้</button><button class="btn danger block" style="margin-top:8px" onclick="setStatus('${i.id}','cancelled')">ยกเลิกของชิ้นนี้</button>`:''}${!isShopper&&i.status==='requested'&&S.trip.close&&S.trip.close<todayStr()?`<p class="muted" style="margin-top:14px;line-height:1.7">ปิดกระเป๋าแล้ว แก้ไขรายการเองไม่ได้ ถ้าต้องเปลี่ยนอะไร ทัก ${esc(S.trip.shopper)} ตรงได้เลย</p>`:''}
    ${!isShopper&&i.status!=='requested'?`<p class="muted" style="margin-top:12px">${esc(S.trip.shopper)} รับไว้แล้วนะ ถ้ามีอะไรเปลี่ยน ทักมาบอกได้เลย</p>`:''}`);
 }
