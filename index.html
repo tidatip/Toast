@@ -79,6 +79,18 @@
 .rows .rw:first-child{border-top:0}
 .rows .rw .v{color:var(--ink-2);font-size:14px}
 .ic{vertical-align:-3px;flex:none}
+.cropper{position:fixed;inset:0;z-index:80;background:#1B1712;display:flex;flex-direction:column}
+.cropper .ctitle{color:#F4E9D2;text-align:center;padding:calc(12px + env(safe-area-inset-top)) 12px 8px;font-size:15px;font-family:var(--font-head)}
+.cropper .stage{position:relative;flex:1;overflow:hidden;touch-action:none}
+.cropper canvas{position:absolute;inset:0;width:100%;height:100%}
+.cropper .hint{position:absolute;left:0;right:0;bottom:8px;text-align:center;color:#E8DCC2;font-size:12px;pointer-events:none}
+.cropper .acts{display:flex;gap:10px;padding:12px 16px calc(16px + env(safe-area-inset-bottom))}
+.cropper .acts .btn{flex:1}
+.cropper .acts .ghost{background:transparent;border:1.5px solid #5A5043;color:#F4E9D2}
+.photobox .recrop{position:absolute;right:8px;bottom:8px;height:32px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.92);color:#4A3417;font-size:12.5px;display:none;align-items:center;z-index:2}
+.photobox.has .recrop{display:flex}
+.viewer{position:fixed;inset:0;z-index:85;background:rgba(20,16,12,.92);display:flex;align-items:center;justify-content:center;padding:16px}
+.viewer img{max-width:100%;max-height:100%;border-radius:12px}
 .vh{position:absolute;left:0;top:0;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0 0 0 0);pointer-events:none}
 .fab{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));display:flex;justify-content:center;pointer-events:none;z-index:5}
 .fab .btn{pointer-events:auto;max-width:560px;width:calc(100% - 32px);box-shadow:0 4px 14px rgba(58,36,21,.12)}
@@ -266,7 +278,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='5.7';
+const VERSION='5.8';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -320,6 +332,10 @@ async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncod
 const Q=new URLSearchParams(location.search);
 const REQPREVIEW=/requester/.test(location.pathname);
 const EN=[
+["จัดรูปให้พอดี","Frame your photo"],
+["เลื่อนนิ้วเพื่อย้าย · หุบนิ้วเพื่อซูม","Drag to move · pinch to zoom"],
+["ใช้รูปนี้","Use this photo"],
+["ครอปใหม่","Re-crop"],
 ["ปรับค่าฝากซื้อ","Adjust fee"],
 ["ฝากซื้อเลย","Get this for me"],
 ["ปิดกระเป๋าแล้ว แก้ไขรายการเองไม่ได้ ถ้าต้องเปลี่ยนอะไร ทัก","Requests are closed — you can't edit this yourself. Message"],
@@ -877,7 +893,7 @@ function bindSwipes(){document.querySelectorAll('.swipe').forEach(el=>{let x0=nu
 function hideReq(id){const hd=new Set(LS('toast:hiddenReq')||[]);hd.add(id);LS('toast:hiddenReq',[...hd]);LS('toast:recent',(LS('toast:recent')||[]).filter(r=>r.id!==id));toast('ลบออกจากรายการแล้ว');renderLanding()}
 function toggleSel(id){if(!reqSel)return;reqSel.has(id)?reqSel.delete(id):reqSel.add(id);renderLanding()}
 function hideSelected(){const hd=new Set(LS('toast:hiddenReq')||[]);reqSel.forEach(id=>hd.add(id));LS('toast:hiddenReq',[...hd]);LS('toast:recent',(LS('toast:recent')||[]).filter(r=>!reqSel.has(r.id)));const n=reqSel.size;reqSel=null;toast('ลบแล้ว '+n+' รายการ');renderLanding()}
-function pickCover(inp,id){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');const s=Math.min(1,900/Math.max(im.width,im.height));c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);LS('toast:cover:'+id,c.toDataURL('image/jpeg',.7));renderLanding()};im.src=r.result};r.readAsDataURL(f)}
+function pickCover(inp,id){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{openCropper(r.result,16/9,d=>{LS('toast:cover:'+id,d);renderLanding()});inp.value=''};r.readAsDataURL(f)}
 const FEE_TYPES=[['none','ไม่คิดเงิน',''],['perItem','ต่อชิ้น','THB/ชิ้น'],['perKg','ตามน้ำหนัก','THB/กก.'],['percent','ร้อยละ','% ของราคาสินค้า'],['blocked','ไม่รับฝาก','']];
 let feeType='perItem';
 function openCreate(){
@@ -1174,7 +1190,7 @@ function openItemForm(edit){
   const asShopper=S.role==='shopper';
   sheet(`<h2>${editingId?'แก้ไขรายการ':(asShopper?'ใส่ของให้เพื่อน':'ฝากซื้อของ')}</h2>
    ${asShopper?`<div class="field"><label>ชื่อผู้ฝาก</label><input id="fWho" placeholder="เพื่อนคนไหน"></div>`:''}
-   <div class="field"><label>รูปสินค้า</label><div class="photobox" id="fBox" onclick="document.getElementById('fFile').click()"><img id="fImg" alt=""><span class="ph">${ic('camera',28)}แตะใส่รูปของที่อยากได้</span></div><input id="fFile" class="vh" type="file" accept="image/*" onchange="pickPhoto(this,'fImg','main')"></div>
+   <div class="field"><label>รูปสินค้า</label><div class="photobox" id="fBox" onclick="document.getElementById('fFile').click()"><img id="fImg" alt=""><span class="ph">${ic('camera',28)}แตะใส่รูปของที่อยากได้</span><button type="button" class="recrop" onclick="event.stopPropagation();recrop(\'main\')">ครอปใหม่</button></div><input id="fFile" class="vh" type="file" accept="image/*" onchange="pickPhoto(this,'fImg','main')"></div>
    <div class="field"><label>ชื่อสินค้า</label><input id="fName" value="${edit?esc(edit.name||''):''}" placeholder="เช่น Kit Kat รสชาเขียว"></div>
    <div class="row"><div class="field"><label>ราคาที่เห็น (${cur()})</label><input id="fPrice" inputmode="decimal" value="${edit?(edit.price||''):''}" oninput="approx('fPrice','aPrice')"><div class="approx" id="aPrice" style="margin:2px 0 0"></div></div><div class="field"><label>จำนวน</label><input id="fQty" inputmode="numeric" value="${edit?(edit.qty||1):1}"></div></div>
    <div class="field hidden" id="wBox"><label>น้ำหนักโดยประมาณ (กก.)</label><input id="fWeight" inputmode="decimal" value="${edit?(edit.weight||''):''}" placeholder="เช่น 1.5"></div>
@@ -1189,7 +1205,7 @@ function openItemForm(edit){
    </div>
    <div id="subBox" class="hidden card">
      <h3>ของทดแทน</h3>
-     <div class="field"><label>รูป</label><div class="photobox" id="sBox" onclick="document.getElementById('sFile').click()"><img id="sImg" alt=""><span class="ph">${ic('camera',24)}เพิ่มรูป</span></div><input id="sFile" class="vh" type="file" accept="image/*" onchange="pickPhoto(this,'sImg','sub')"></div>
+     <div class="field"><label>รูป</label><div class="photobox" id="sBox" onclick="document.getElementById('sFile').click()"><img id="sImg" alt=""><span class="ph">${ic('camera',24)}เพิ่มรูป</span><button type="button" class="recrop" onclick="event.stopPropagation();recrop(\'sub\')">ครอปใหม่</button></div><input id="sFile" class="vh" type="file" accept="image/*" onchange="pickPhoto(this,'sImg','sub')"></div>
      <div class="field"><label>ชื่อสินค้า</label><input id="sName" value="${edit&&edit.substitute?esc(edit.substitute.name||''):''}"></div>
      <div class="row"><div class="field"><label>ราคา (${cur()})</label><input id="sPrice" inputmode="decimal" value="${edit&&edit.substitute?(edit.substitute.price||''):''}" oninput="approx('sPrice','aSPrice')"><div class="approx" id="aSPrice" style="margin:2px 0 0"></div></div><div class="field"><label>จำนวน</label><input id="sQty" inputmode="numeric" value="${edit&&edit.substitute?(edit.substitute.qty||1):1}"></div></div>
      <div class="field"><label>รายละเอียด</label><textarea id="sDetail">${edit&&edit.substitute?esc(edit.substitute.detail||''):''}</textarea></div>
@@ -1200,9 +1216,60 @@ function openItemForm(edit){
 function fbUI(v){$('#subBox').classList.toggle('hidden',v!=='substitute');$('#contactBox').classList.toggle('hidden',v!=='contact')}
 function pickCat(b){[...b.parentNode.children].forEach(x=>x.classList.remove('on'));b.classList.add('on');wUI()}
 function wUI(){const box=$('#wBox');if(!box)return;const c=(($('#fCatPick .on')||{}).textContent)||catsOpen()[0]||cats()[0];const r=feeRule({cat:c},S.trip);box.classList.toggle('hidden',r.type!=='perKg')}
+let cropSrc=null;
+function openCropper(dataUrl,aspect,cb){
+  const wrap=document.createElement('div');wrap.className='cropper';
+  wrap.innerHTML=`<div class="ctitle">${tr('จัดรูปให้พอดี')}</div><div class="stage"><canvas></canvas><div class="hint">${tr('เลื่อนนิ้วเพื่อย้าย · หุบนิ้วเพื่อซูม')}</div></div><div class="acts"><button class="btn ghost">${tr('ยกเลิก')}</button><button class="btn">${tr('ใช้รูปนี้')}</button></div>`;
+  document.body.appendChild(wrap);
+  const cv=wrap.querySelector('canvas'),ctx=cv.getContext('2d');
+  const img=new Image();
+  let st={x:0,y:0,s:1},box={x:0,y:0,w:0,h:0},dpr=Math.min(2,devicePixelRatio||1);
+  function layout(){const r=wrap.querySelector('.stage').getBoundingClientRect();cv.width=r.width*dpr;cv.height=r.height*dpr;
+    const pad=18;let w=r.width-pad*2,hh=w/aspect;if(hh>r.height-pad*2){hh=r.height-pad*2;w=hh*aspect}
+    box={x:(r.width-w)/2,y:(r.height-hh)/2,w,h:hh};
+    const fit=Math.max(box.w/img.width,box.h/img.height);st.s=fit;st.x=box.x+box.w/2-img.width*fit/2;st.y=box.y+box.h/2-img.height*fit/2;draw()}
+  function clamp(){const w=img.width*st.s,hh=img.height*st.s;
+    if(w<box.w)st.s=box.w/img.width;if(img.height*st.s<box.h)st.s=box.h/img.height;
+    const W=img.width*st.s,H=img.height*st.s;
+    st.x=Math.min(box.x,Math.max(box.x+box.w-W,st.x));st.y=Math.min(box.y,Math.max(box.y+box.h-H,st.y))}
+  function draw(){clamp();const r=wrap.querySelector('.stage').getBoundingClientRect();
+    ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,r.width,r.height);
+    ctx.drawImage(img,st.x,st.y,img.width*st.s,img.height*st.s);
+    ctx.fillStyle='rgba(0,0,0,.5)';ctx.beginPath();ctx.rect(0,0,r.width,r.height);ctx.rect(box.x,box.y,box.w,box.h);ctx.fill('evenodd');
+    ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.strokeRect(box.x,box.y,box.w,box.h)}
+  let pts={};
+  const stage=wrap.querySelector('.stage');
+  const dist=a=>Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y),mid=a=>({x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2});
+  let last=null;
+  stage.addEventListener('touchstart',e=>{const r=stage.getBoundingClientRect();pts=[...e.touches].map(t=>({x:t.clientX-r.left,y:t.clientY-r.top}));last=pts.length>1?{d:dist(pts),m:mid(pts)}:{m:pts[0]}},{passive:true});
+  stage.addEventListener('touchmove',e=>{e.preventDefault();const r=stage.getBoundingClientRect();const cur=[...e.touches].map(t=>({x:t.clientX-r.left,y:t.clientY-r.top}));
+    if(cur.length>1&&last&&last.d){const k=dist(cur)/last.d;const m=mid(cur);st.x=m.x-(last.m.x-st.x)*k;st.y=m.y-(last.m.y-st.y)*k;st.s*=k;last={d:dist(cur),m};}
+    else if(cur.length===1&&last){st.x+=cur[0].x-last.m.x;st.y+=cur[0].y-last.m.y;last={m:cur[0]};}
+    draw()},{passive:false});
+  stage.addEventListener('touchend',()=>{last=null},{passive:true});
+  // mouse fallback
+  let md=null;stage.addEventListener('mousedown',e=>{md={x:e.offsetX,y:e.offsetY}});
+  window.addEventListener('mousemove',e=>{if(!md)return;const r=stage.getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;st.x+=x-md.x;st.y+=y-md.y;md={x,y};draw()});
+  window.addEventListener('mouseup',()=>md=null);
+  stage.addEventListener('wheel',e=>{e.preventDefault();const k=e.deltaY<0?1.08:1/1.08;const r=stage.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;st.x=mx-(mx-st.x)*k;st.y=my-(my-st.y)*k;st.s*=k;draw()},{passive:false});
+  wrap.querySelectorAll('.btn')[0].onclick=()=>wrap.remove();
+  wrap.querySelectorAll('.btn')[1].onclick=()=>{
+    const outW=aspect===1?900:1000,outH=Math.round(outW/aspect);
+    const c=document.createElement('canvas');c.width=outW;c.height=outH;
+    const g=c.getContext('2d');g.imageSmoothingQuality='high';
+    const sx=(box.x-st.x)/st.s, sy=(box.y-st.y)/st.s, sw=box.w/st.s, sh=box.h/st.s;
+    g.drawImage(img,sx,sy,sw,sh,0,0,outW,outH);
+    let q=.82,out=c.toDataURL('image/jpeg',q);
+    while(out.length>800000&&q>.4){q-=.1;out=c.toDataURL('image/jpeg',q)}
+    wrap.remove();cb(out)};
+  img.onload=()=>layout();img.src=dataUrl;
+  addEventListener('resize',layout);
+}
+function recrop(which){const cur=which==='main'?photoData:subPhotoData;const src=cropSrc&&cropSrc[which]||cur;if(!src)return;
+  openCropper(src,1,d=>{if(which==='main'){photoData=d;$('#fImg').src=d;$('#fBox').classList.add('has')}else{subPhotoData=d;$('#sImg').src=d;$('#sBox').classList.add('has')}})}
 function pickPhoto(inp,imgId,which){
   const f=inp.files[0];if(!f)return;const r=new FileReader();
-  r.onload=()=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');const s=Math.min(1,720/Math.max(im.width,im.height));c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);const d=c.toDataURL('image/jpeg',.6);which==='main'?photoData=d:subPhotoData=d;$('#'+imgId).src=d;$('#'+imgId).parentNode.classList.add('has');};im.src=r.result;};
+  r.onload=()=>{cropSrc=cropSrc||{};cropSrc[which]=r.result;openCropper(r.result,1,d=>{which==='main'?photoData=d:subPhotoData=d;const el=$('#'+imgId);el.src=d;el.parentNode.classList.add('has');});inp.value='';};
   r.readAsDataURL(f);
 }
 function useHere(){navigator.geolocation.getCurrentPosition(p=>{$('#fLoc').value=`${p.coords.latitude.toFixed(6)},${p.coords.longitude.toFixed(6)}`;toast('ใส่ตำแหน่งปัจจุบันแล้ว')},()=>toast('ขอตำแหน่งไม่ได้'))}
@@ -1228,13 +1295,14 @@ async function saveItem(){
   else{await store.addItem(S.tripId,it);closeSheet();toast('ใส่กระเป๋าแล้ว!');}
 }
 
+function viewPhoto(src){const d=document.createElement('div');d.className='viewer';d.innerHTML=`<img src="${src}" alt="">`;d.onclick=()=>d.remove();document.body.appendChild(d)}
 function openItem(id){
   const i=S.items.find(x=>x.id===id);if(!i)return;
   const isShopper=S.role==='shopper';const off=['cancelled','notfound'].includes(i.status);
   const next=FLOW[FLOW.indexOf(i.status)+1];
   const sub=(i.fallback==='substitute'&&!(i.substitute&&i.substitute.name))?`<div class="card" style="padding:10px 14px"><div style="font-weight:500">ของสำรอง</div><div class="muted">ยังไม่ได้ระบุของสำรอง ทักถามเจ้าของรายการก่อนนะ</div></div>`:i.substitute&&i.substitute.name?`<div class="card"><h3>ของสำรอง</h3><div class="item">${i.substitute.photo?`<img class="thumb" src="${i.substitute.photo}">`:`<div class="thumb">${ic('swap',26)}</div>`}<div class="body"><div class="name">${esc(i.substitute.name)} <span class="muted">×${i.substitute.qty}</span></div><div class="meta">${i.substitute.price?money(i.substitute.price)+' · ':''}${esc(i.substitute.shop||'')}</div><div class="muted">${esc(i.substitute.detail||'')}</div></div></div></div>`:'';
   sheet(`
-   ${i.photo?`<img class="detail-img" src="${i.photo}" alt="">`:''}
+   ${i.photo?`<img class="detail-img" src="${i.photo}" alt="" onclick="viewPhoto(this.src)" style="cursor:zoom-in">`:''}
    <h2>${esc(i.name)} <span class="muted">×${i.qty}</span></h2>
    <p class="muted">ฝากโดย ${esc(i.requester)} · ${esc(i.cat)}</p>
    <div style="margin:8px 0"><span class="st ${i.status}">${STATUS[i.status]}</span></div>
