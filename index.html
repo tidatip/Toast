@@ -228,6 +228,10 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 .paybox .pr{display:flex;justify-content:space-between;font-size:13px;padding:2px 0}
 .paybox .pr span{color:var(--ink-2);font-weight:300}
 .paybox .pr b{font-weight:500}
+.paybox .pr .pv{text-align:right}
+.paybox .pr .pv i{display:block;font-style:normal;font-size:11px;color:var(--ink-2);font-weight:300}
+.paybox .pr.sep{border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:4px}
+.paybox .pr.tot span{color:var(--ink);font-weight:500}
 .paybox .pr b.left{color:#B0483F}
 .paybox .pr b.ok{color:#2F6B3C}
 .paybox .pnote{font-size:12px;color:var(--ink-2);margin-top:4px}
@@ -289,7 +293,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='6.0';
+const VERSION='6.1';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -343,6 +347,10 @@ async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncod
 const Q=new URLSearchParams(location.search);
 const REQPREVIEW=/requester/.test(location.pathname);
 const EN=[
+["ค่าบริการ","Shopper fee"],
+["ค่าสินค้า","Items"],
+["รวม","Total"],
+["รับโอนแล้ว","Received"],
 ["QR พร้อมเพย์ (ไม่บังคับ)","PromptPay QR (optional)"],
 ["แตะใส่รูป QR","Tap to add your QR"],
 ["ดู QR พร้อมเพย์","Show PromptPay QR"],
@@ -1165,6 +1173,16 @@ function countBadges(list){
 const PAYS=[['none','ยังไม่จ่าย'],['partial','มัดจำแล้ว'],['paid','จ่ายครบ']];
 function payOf(name){const p=(S.trip&&S.trip.pay)||{};return p[name]||{s:'none',amt:0,note:''}}
 function dueOf(list){return list.filter(i=>!['cancelled','notfound'].includes(i.status)).reduce((a,i)=>a+goodsThb(i)+feeFor(i),0)}
+function splitDue(list){const act=list.filter(i=>!['cancelled','notfound'].includes(i.status));
+  const goodsCur=act.reduce((a,i)=>a+(Number(i.paid||i.price)||0)*(Number(i.qty)||1),0);
+  const goodsThbSum=act.reduce((a,i)=>a+goodsThb(i),0);
+  const fee=act.reduce((a,i)=>a+feeFor(i),0);
+  return {goodsCur,goodsThb:goodsThbSum,fee,total:goodsThbSum+fee}}
+function dueRows(list,p,opts){const d=splitDue(list);const left=Math.max(0,d.total-((p&&p.amt)||0));const sameCur=cur()==='THB';
+  return `<div class="pr"><span>ค่าสินค้า</span><span class="pv"><b>${cur()} ${fmt(d.goodsCur)}</b>${sameCur?'':`<i>≈ THB ${fmt(d.goodsThb)}</i>`}</span></div>
+   <div class="pr sep"><span>ค่าบริการ</span><b>THB ${fmt(d.fee)}</b></div>
+   <div class="pr tot"><span>รวม</span><b>THB ${fmt(d.total)}</b></div>
+   ${(p&&p.amt)?`<div class="pr"><span>รับโอนแล้ว</span><b>THB ${fmt(p.amt)}</b></div><div class="pr"><span>คงเหลือ</span><b class="${left>0?'left':'ok'}">THB ${fmt(left)}</b></div>`:''}`}
 function cyclePay(name){const cur=payOf(name);const order=PAYS.map(x=>x[0]);const nx=order[(order.indexOf(cur.s)+1)%order.length];
   const val=Object.assign({},cur,{s:nx});if(nx==='none')val.amt=0;
   store.setPay(S.tripId,name,val).then(()=>{S.trip.pay=Object.assign({},S.trip.pay,{[name]:val});render()}).catch(e=>toast('บันทึกไม่ได้: '+(e.code||e.message)))}
@@ -1187,8 +1205,7 @@ function peopleView(){
    names.map(n=>{const due=dueOf(by[n]);const p=payOf(n);const left=Math.max(0,due-(p.amt||0));
    return `<details class="card acc" ${names.length<4?'open':''}><summary><div class="av">${esc(initials(n))}</div><div class="who"><b>${esc(n)}</b><div class="muted">${by[n].length} ชิ้น</div></div>${countBadges(by[n])}<span class="caret">${ic('chev',16)}</span></summary>
    <div class="paybox" onclick="event.preventDefault();editPay('${esc(n)}',${due})">
-     <div class="pr"><span>รวม</span><b>THB ${fmt(due)}</b></div>
-     ${p.amt?`<div class="pr"><span>รับโอน</span><b>THB ${fmt(p.amt)}</b></div><div class="pr"><span>คงเหลือ</span><b class="${left>0?'left':'ok'}">THB ${fmt(left)}</b></div>`:''}
+     ${dueRows(by[n],p)}
      ${p.note?`<div class="pnote">${esc(p.note)}</div>`:''}
      <div class="prow2"><span class="paypill ${p.s}">${PAYS.find(x=>x[0]===p.s)[1]}</span><span class="muted" style="font-size:11.5px">แตะเพื่อบันทึกการจ่าย</span></div>
    </div>${by[n].map(itemRow).join('')}</details>`}).join('');
@@ -1246,7 +1263,7 @@ function renderRequester(){
   const t=S.trip;const closed=t.close&&t.close<todayStr();const rules=`<div class="card" style="padding:12px 14px"><div style="font-weight:500;margin-bottom:4px">รายละเอียดฝากซื้อ</div><div class="muted" style="line-height:1.7">${[t.recv?`รับของ ${dfmt(t.recv)}`:'',t.close?`ปิดรับฝาก ${dfmt(t.close)}${closed?' (ปิดแล้ว)':''}`:''].filter(Boolean).join(' · ')}${(t.recv||t.close)?'<br>':''}อัตรา 1 ${cur()} = ${(t.rate||1).toFixed(4)} THB</div>${feeLines(t)}${t.deposit?`<div class="muted" style="margin-top:6px">${esc(String(t.deposit))}</div>`:''}${t.payinfo?`<div class="muted" style="margin-top:6px">โอนมาที่ ${esc(t.payinfo)}</div>`:''}${t.hasqr?`<button class="btn ghost sm" style="margin-top:8px" onclick="showQR()">ดู QR พร้อมเพย์</button>`:''}${t.note?`<div class="muted" style="margin-top:6px;line-height:1.7">${esc(t.note)}</div>`:''}</div>`;
   shell(rules+`
    ${closed?`<div class="card" style="text-align:center;color:var(--ink-2)">ปิดกระเป๋าแล้ว ถ้ามีอะไรด่วน ทัก ${esc(t.shopper)} ได้เลย</div>`:`<button class="btn block" style="margin-bottom:12px" onclick="openItemForm()">+ ฝากของเข้ากระเป๋า</button>`}
-   ${mine.length?`${(()=>{const due=dueOf(mine);const p=payOf(S.me);const left=Math.max(0,due-(p.amt||0));return `<div class="card" style="padding:10px 14px"><div class="pr" style="display:flex;justify-content:space-between"><span class="muted">รวมที่ต้องจ่าย</span><b>THB ${fmt(due)}</b></div>${p.amt?`<div class="pr" style="display:flex;justify-content:space-between"><span class="muted">โอนแล้ว</span><b>THB ${fmt(p.amt)}</b></div><div class="pr" style="display:flex;justify-content:space-between"><span class="muted">คงเหลือ</span><b style="color:${left>0?'#B0483F':'#2F6B3C'}">THB ${fmt(left)}</b></div>`:''}${S.trip.payinfo?`<div class="muted" style="margin-top:6px">โอนมาที่ ${esc(S.trip.payinfo)}</div>`:''}</div>`})()}<div class="card">${mine.map(itemRow).join('')}</div>`:emptyState('ลิสต์ยังว่างอยู่','ชิ้นแรก เริ่มตรงนี้')}
+   ${mine.length?`${(()=>{const p=payOf(S.me);return `<div class="card paybox" style="cursor:default">${dueRows(mine,p)}${S.trip.payinfo?`<div class="muted" style="margin-top:6px">โอนมาที่ ${esc(S.trip.payinfo)}</div>`:''}${S.trip.hasqr?`<button class="btn ghost sm" style="margin-top:8px" onclick="showQR()">ดู QR พร้อมเพย์</button>`:''}</div>`})()}<div class="card">${mine.map(itemRow).join('')}</div>`:emptyState('ลิสต์ยังว่างอยู่','ชิ้นแรก เริ่มตรงนี้')}
    <p class="muted" style="text-align:center">ฝากในชื่อ <b>${esc(S.me)}</b> · <button class="btn ghost sm" onclick="S.me='';LS('toast:me','');render()">เปลี่ยนชื่อ</button></p>`);
 }
 function emptyState(t,s){return `<div class="empty"><img src="${ICON}" alt="" style="width:64px;height:64px;border-radius:14px;opacity:.7"><div>${esc(t)}</div><div class="muted">${esc(s)}</div></div>`}
