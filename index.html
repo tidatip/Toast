@@ -58,6 +58,7 @@
 .seg3{display:flex;background:var(--accent-soft);border-radius:12px;padding:3px;margin-bottom:12px}
 .seg3 button{flex:1;padding:8px 2px;border-radius:10px;color:var(--ink-2);font-weight:400;font-size:13.5px;white-space:nowrap}
 .seg3 button.on{background:var(--card);color:var(--ink);font-weight:500}
+.sharesheet .share{height:48px;padding:0 6px 0 12px}.sharesheet .share code{font-size:15px}.sharesheet .share .btn.sm,.sharesheet .row .btn.sm,.sharesheet .lacts .btn.sm{min-height:34px;height:34px;padding:0 14px}.sharesheet .btn.block{min-height:48px;height:48px;font-size:16px;box-shadow:none}.sharesheet #plName{height:48px}.sharesheet .lcard{padding:0 14px}.sharesheet .lrow{height:48px;padding:0}.sharesheet .lrow .n{font-size:16px}.sharesheet h3{margin-top:16px}
 .lcard{padding:4px 14px}.lrow{padding:7px 0}.lrow .n{font-size:15px}
 .lacts{display:flex;gap:6px;flex:none}.lacts .btn.sm{padding:5px 11px;min-height:34px}
 .smallcard{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
@@ -295,7 +296,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='6.3';
+const VERSION='6.4';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -1251,14 +1252,14 @@ function haversine(a,b){const R=6371,d=x=>x*Math.PI/180;const dl=d(b.lat-a.lat),
 function locateMe(){navigator.geolocation.getCurrentPosition(p=>{S.pos={lat:p.coords.latitude,lng:p.coords.longitude};itemSort='near';render()},()=>toast('ยังหาโลเคชันไม่เจอ ลองเปิดสิทธิ์ตำแหน่งในเบราว์เซอร์นะ'),{enableHighAccuracy:true,timeout:8000})}
 function openShare(){
   const link=location.origin+location.pathname+`?t=${S.tripId}&r=1`;
-  sheet(`<h2>แชร์กระเป๋า</h2>
+  sheet(`<div class="sharesheet"><h2>แชร์กระเป๋า</h2>
     <h3>ลิงค์กลุ่ม</h3><p class="muted">ลิงก์เดียวให้ทั้งกลุ่ม ฝากได้ทันที ไม่ต้องเป็นสมาชิก
 ทุกคนกดลิงค์เดียวกัน แต่เห็นแค่ของตัวเอง</p>
     <div class="share" style="margin:8px 0"><code>${esc(link)}</code><button class="btn sm" onclick="copyLink('${link}')">คัดลอก</button></div>
     ${navigator.share?`<button class="btn block ghost" onclick="navigator.share({title:'ฝากซื้อกับ ${esc(S.trip.shopper)} · ${esc(S.trip.name)}',url:'${link}'})">แชร์…</button>`:''}
     <h3 style="margin-top:18px">ลิงค์ส่วนตัว</h3><p class="muted">ลิงค์เฉพาะบุคคล</p>
-    <div class="row" style="margin-top:8px"><input id="plName" placeholder="ชื่อเพื่อน" style="padding:7px 12px;border:1.5px solid var(--line);border-radius:12px;height:38px;background:var(--card)"><button class="btn sm" onclick="personalLink()">สร้าง</button></div><div id="plOut"></div>
-    ${linkList()}`);
+    <div class="row" style="margin-top:8px"><input id="plName" placeholder="ชื่อเพื่อน" style="padding:7px 12px;border:1.5px solid var(--line);border-radius:12px;height:48px;background:var(--card)"><button class="btn sm" onclick="personalLink()">สร้าง</button></div><div id="plOut"></div>
+    ${linkList()}</div>`);
 }
 async function toggleInvite(fuid,on){const inv=new Set(S.trip.invited||[]);on?inv.add(fuid):inv.delete(fuid);const arr=[...inv];await store.updateTrip(S.tripId,{invited:arr});S.trip.invited=arr;toast(on?'ส่งให้แล้ว':'ยกเลิกแล้ว')}
 function tokLink(tok,name){return location.origin+location.pathname+`?t=${S.tripId}&r=1&p=${tok}&n=${encodeURIComponent(name||'')}`}
