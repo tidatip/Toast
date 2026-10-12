@@ -293,7 +293,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='6.1';
+const VERSION='6.2';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -442,7 +442,7 @@ const EN=[
 ["ลองผิดหลายครั้ง รอสักครู่","Too many tries — take a short break"],
 ["กรอกชื่อผู้ใช้และรหัสผ่าน","Enter your username and password"],
 ["ของที่อยากฝากเพื่อนซื้อ","Things I'd love them to bring back"],
-["คัดลองลิงค์แล้ว ส่งได้เลย","Link copied — go share it"],
+["คัดลอกลิงค์แล้ว ส่งได้เลย","Link copied — go share it"],
 ["ชื่อผู้ใช้นี้มีคนใช้แล้ว","That username is taken"],
 ["ยังไม่มีอะไรในรายการ","Nothing here yet"],
 ["ลบรายการที่จบแล้วทั้งหมด","Delete all finished items"],
@@ -1249,12 +1249,45 @@ function openShare(){
 ทุกคนกดลิงค์เดียวกัน แต่เห็นแค่ของตัวเอง</p>
     <div class="share" style="margin:8px 0"><code>${esc(link)}</code><button class="btn sm" onclick="copyLink('${link}')">คัดลอก</button></div>
     ${navigator.share?`<button class="btn block ghost" onclick="navigator.share({title:'ฝากซื้อกับ ${esc(S.trip.shopper)} · ${esc(S.trip.name)}',url:'${link}'})">แชร์…</button>`:''}
-    <h3 style="margin-top:18px">ลิงค์ส่วนตัว</h3><p class="muted">ลิงค์เฉพาะบุคคล</p>
-    <div class="row" style="margin-top:8px"><input id="plName" placeholder="ชื่อเพื่อน" style="padding:7px 12px;border:1.5px solid var(--line);border-radius:12px;height:38px;background:var(--card)"><button class="btn sm" onclick="personalLink()">สร้าง</button></div><div id="plOut"></div>`);
+    ${groupNote()}
+    <h3 style="margin-top:18px">ลิงค์ส่วนตัว</h3><p class="muted">ลิงค์เฉพาะบุคคล ใส่ชื่อไว้ให้เลย แล้วเช็กได้ว่าใครฝากของมาแล้ว</p>
+    <div class="row" style="margin-top:8px"><input id="plName" placeholder="ชื่อเพื่อน" style="padding:7px 12px;border:1.5px solid var(--line);border-radius:12px;height:38px;background:var(--card)"><button class="btn sm" onclick="personalLink()">สร้าง</button></div><div id="plOut"></div>
+    ${linkList()}`);
 }
 async function toggleInvite(fuid,on){const inv=new Set(S.trip.invited||[]);on?inv.add(fuid):inv.delete(fuid);const arr=[...inv];await store.updateTrip(S.tripId,{invited:arr});S.trip.invited=arr;toast(on?'ส่งให้แล้ว':'ยกเลิกแล้ว')}
-function personalLink(){const n=$('#plName').value.trim();if(!n)return toast('ใส่ชื่อเพื่อนก่อน');const tok=uid(8);const l=location.origin+location.pathname+`?t=${S.tripId}&r=1&p=${tok}&n=${encodeURIComponent(n)}`;$('#plOut').innerHTML=`<div class="share" style="margin-top:8px"><code>${esc(l)}</code><button class="btn sm" onclick="copyLink('${l}')">คัดลอก</button></div>`}
-function copyLink(l){navigator.clipboard.writeText(l).then(()=>toast('คัดลองลิงค์แล้ว ส่งได้เลย'))}
+function tokLink(tok,name){return location.origin+location.pathname+`?t=${S.tripId}&r=1&p=${tok}&n=${encodeURIComponent(name||'')}`}
+function linkItems(tok){return (S.items||[]).filter(i=>i.rid===tok)}
+function groupNote(){
+  const toks=(S.trip.links||[]).map(l=>l.tok);
+  const others=new Set((S.items||[]).filter(i=>i.rid&&!toks.includes(i.rid)).map(i=>i.rid));
+  return others.size?`<p class="muted" style="margin-top:8px">ฝากผ่านลิงค์กลุ่มมาแล้ว ${others.size} คน</p>`:'';
+}
+function linkList(){
+  const ls=(S.trip.links||[]).slice().sort((a,b)=>(b.at||0)-(a.at||0));
+  if(!ls.length)return `<h3 style="margin-top:18px">ลิงค์ที่ส่งไปแล้ว</h3><p class="muted">ยังไม่ได้สร้างลิงค์ส่วนตัวให้ใคร สร้างแล้วชื่อจะมาอยู่ตรงนี้</p>`;
+  const rows=ls.map(l=>{
+    const its=linkItems(l.tok);
+    const done=its.filter(i=>i.status==='delivered').length;
+    const m=its.length?`ฝากแล้ว ${its.length} ชิ้น${done?` · ถึงมือแล้ว ${done}`:''}`:'ยังไม่ฝากของ';
+    return `<div class="smallcard"><div><div class="n">${esc(l.name)}</div><div class="m">${m}</div></div><div style="display:flex;gap:6px;flex:none"><button class="btn ghost sm" onclick="copyTok('${l.tok}')">คัดลอก</button><button class="btn ghost sm" onclick="delLink('${l.tok}')">ลบ</button></div></div>`;
+  }).join('');
+  return `<h3 style="margin-top:18px">ลิงค์ที่ส่งไปแล้ว · ${ls.length}</h3><div class="card" style="margin-top:8px">${rows}</div>`;
+}
+async function personalLink(){const n=$('#plName').value.trim();if(!n)return toast('ใส่ชื่อเพื่อนก่อน');
+  const tok=uid(8);const links=[...(S.trip.links||[]),{tok,name:n,at:Date.now()}];
+  try{await store.updateTrip(S.tripId,{links});}catch(e){}
+  S.trip.links=links;const l=tokLink(tok,n);
+  openShare();$('#plOut').innerHTML=`<div class="share" style="margin-top:8px"><code>${esc(l)}</code><button class="btn sm" onclick="copyLink('${l}')">คัดลอก</button></div>`;
+  toast('สร้างลิงค์ให้ '+n+' แล้ว');
+}
+function copyTok(tok){const l=(S.trip.links||[]).find(x=>x.tok===tok);if(l)copyLink(tokLink(tok,l.name))}
+async function delLink(tok){const l=(S.trip.links||[]).find(x=>x.tok===tok);if(!l)return;
+  if(!confirm(tr('เอา '+l.name+' ออกจากรายการ? ของที่ฝากมาแล้วไม่หาย และลิงค์ที่ส่งไปแล้วยังใช้ได้')))return;
+  const links=(S.trip.links||[]).filter(x=>x.tok!==tok);
+  try{await store.updateTrip(S.tripId,{links});}catch(e){}
+  S.trip.links=links;openShare();
+}
+function copyLink(l){navigator.clipboard.writeText(l).then(()=>toast('คัดลอกลิงค์แล้ว ส่งได้เลย'))}
 
 /* --- requester --- */
 function renderRequester(){
@@ -1352,13 +1385,18 @@ function openCropper(dataUrl,aspect,cb){
   stage.addEventListener('wheel',e=>{e.preventDefault();const k=e.deltaY<0?1.08:1/1.08;const r=stage.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;st.x=mx-(mx-st.x)*k;st.y=my-(my-st.y)*k;st.s*=k;draw()},{passive:false});
   wrap.querySelectorAll('.btn')[0].onclick=()=>wrap.remove();
   wrap.querySelectorAll('.btn')[1].onclick=()=>{
-    const outW=aspect===1?900:1000,outH=Math.round(outW/aspect);
-    const c=document.createElement('canvas');c.width=outW;c.height=outH;
-    const g=c.getContext('2d');g.imageSmoothingQuality='high';
     const sx=(box.x-st.x)/st.s, sy=(box.y-st.y)/st.s, sw=box.w/st.s, sh=box.h/st.s;
-    g.drawImage(img,sx,sy,sw,sh,0,0,outW,outH);
-    let q=.82,out=c.toDataURL('image/jpeg',q);
-    while(out.length>800000&&q>.4){q-=.1;out=c.toDataURL('image/jpeg',q)}
+    const render=w=>{const h=Math.round(w/aspect);const c=document.createElement('canvas');c.width=w;c.height=h;
+      const g=c.getContext('2d');g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
+      g.drawImage(img,sx,sy,sw,sh,0,0,w,h);return c};
+    const CAP=200000;
+    let w=aspect===1?900:1000,c=render(w),q=.74,out=c.toDataURL('image/jpeg',q);
+    while(out.length>CAP){
+      if(q>.52)q-=.07;
+      else if(w>620){w=Math.round(w*.8);q=.74;c=render(w)}
+      else break;
+      out=c.toDataURL('image/jpeg',q);
+    }
     wrap.remove();cb(out)};
   img.onload=()=>layout();img.src=dataUrl;
   addEventListener('resize',layout);
