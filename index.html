@@ -1249,28 +1249,16 @@ function openShare(){
 ทุกคนกดลิงค์เดียวกัน แต่เห็นแค่ของตัวเอง</p>
     <div class="share" style="margin:8px 0"><code>${esc(link)}</code><button class="btn sm" onclick="copyLink('${link}')">คัดลอก</button></div>
     ${navigator.share?`<button class="btn block ghost" onclick="navigator.share({title:'ฝากซื้อกับ ${esc(S.trip.shopper)} · ${esc(S.trip.name)}',url:'${link}'})">แชร์…</button>`:''}
-    ${groupNote()}
-    <h3 style="margin-top:18px">ลิงค์ส่วนตัว</h3><p class="muted">ลิงค์เฉพาะบุคคล ใส่ชื่อไว้ให้เลย แล้วเช็กได้ว่าใครฝากของมาแล้ว</p>
+    <h3 style="margin-top:18px">ลิงค์ส่วนตัว</h3><p class="muted">ลิงค์เฉพาะบุคคล ใส่ชื่อไว้ให้เลย จะได้รู้ว่าส่งให้ใครไปแล้วบ้าง</p>
     <div class="row" style="margin-top:8px"><input id="plName" placeholder="ชื่อเพื่อน" style="padding:7px 12px;border:1.5px solid var(--line);border-radius:12px;height:38px;background:var(--card)"><button class="btn sm" onclick="personalLink()">สร้าง</button></div><div id="plOut"></div>
     ${linkList()}`);
 }
 async function toggleInvite(fuid,on){const inv=new Set(S.trip.invited||[]);on?inv.add(fuid):inv.delete(fuid);const arr=[...inv];await store.updateTrip(S.tripId,{invited:arr});S.trip.invited=arr;toast(on?'ส่งให้แล้ว':'ยกเลิกแล้ว')}
 function tokLink(tok,name){return location.origin+location.pathname+`?t=${S.tripId}&r=1&p=${tok}&n=${encodeURIComponent(name||'')}`}
-function linkItems(tok){return (S.items||[]).filter(i=>i.rid===tok)}
-function groupNote(){
-  const toks=(S.trip.links||[]).map(l=>l.tok);
-  const others=new Set((S.items||[]).filter(i=>i.rid&&!toks.includes(i.rid)).map(i=>i.rid));
-  return others.size?`<p class="muted" style="margin-top:8px">ฝากผ่านลิงค์กลุ่มมาแล้ว ${others.size} คน</p>`:'';
-}
 function linkList(){
   const ls=(S.trip.links||[]).slice().sort((a,b)=>(b.at||0)-(a.at||0));
   if(!ls.length)return `<h3 style="margin-top:18px">ลิงค์ที่ส่งไปแล้ว</h3><p class="muted">ยังไม่ได้สร้างลิงค์ส่วนตัวให้ใคร สร้างแล้วชื่อจะมาอยู่ตรงนี้</p>`;
-  const rows=ls.map(l=>{
-    const its=linkItems(l.tok);
-    const done=its.filter(i=>i.status==='delivered').length;
-    const m=its.length?`ฝากแล้ว ${its.length} ชิ้น${done?` · ถึงมือแล้ว ${done}`:''}`:'ยังไม่ฝากของ';
-    return `<div class="smallcard"><div><div class="n">${esc(l.name)}</div><div class="m">${m}</div></div><div style="display:flex;gap:6px;flex:none"><button class="btn ghost sm" onclick="copyTok('${l.tok}')">คัดลอก</button><button class="btn ghost sm" onclick="delLink('${l.tok}')">ลบ</button></div></div>`;
-  }).join('');
+  const rows=ls.map(l=>`<div class="smallcard"><div class="n">${esc(l.name)}</div><div style="display:flex;gap:6px;flex:none"><button class="btn ghost sm" onclick="copyTok('${l.tok}')">คัดลอก</button><button class="btn ghost sm" onclick="delLink('${l.tok}')">ลบ</button></div></div>`).join('');
   return `<h3 style="margin-top:18px">ลิงค์ที่ส่งไปแล้ว · ${ls.length}</h3><div class="card" style="margin-top:8px">${rows}</div>`;
 }
 async function personalLink(){const n=$('#plName').value.trim();if(!n)return toast('ใส่ชื่อเพื่อนก่อน');
