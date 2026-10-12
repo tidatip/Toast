@@ -58,6 +58,8 @@
 .seg3{display:flex;background:var(--accent-soft);border-radius:12px;padding:3px;margin-bottom:12px}
 .seg3 button{flex:1;padding:8px 2px;border-radius:10px;color:var(--ink-2);font-weight:400;font-size:13.5px;white-space:nowrap}
 .seg3 button.on{background:var(--card);color:var(--ink);font-weight:500}
+.lcard{padding:4px 14px}.lrow{padding:7px 0}.lrow .n{font-size:15px}
+.lacts{display:flex;gap:6px;flex:none}.lacts .btn.sm{padding:5px 11px;min-height:34px}
 .smallcard{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
 .smallcard:first-child{border-top:0}
 .smallcard .n{font-weight:500;font-size:16px}.smallcard .m{font-size:13px;color:var(--ink-2);font-weight:300}
@@ -293,7 +295,7 @@ nav.tabs button.on{color:var(--accent-deep);font-weight:500}
 /* =====================================================================
    Toast (single-file PWA)
    ===================================================================== */
-const VERSION='6.2';
+const VERSION='6.3';
 
 /* ---------- 1. CONFIG: ใส่ค่าจาก Firebase project ของ Toast ตรงนี้ ----------
    ปล่อยเป็น null = โหมดทดลองในเครื่อง (localStorage, เห็นแค่เครื่องเดียว) */
@@ -347,6 +349,11 @@ async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncod
 const Q=new URLSearchParams(location.search);
 const REQPREVIEW=/requester/.test(location.pathname);
 const EN=[
+["ลิงค์ที่ส่งไปแล้ว","Links you've sent"],
+["ยังไม่ได้สร้างลิงค์ส่วนตัวให้ใคร สร้างแล้วชื่อจะมาอยู่ตรงนี้","No personal links yet — names show up here once you create one."],
+["เอาชื่อนี้ออกจากรายการ? ของที่ฝากมาแล้วไม่หาย และลิงค์ที่ส่งไปแล้วยังใช้ได้","Remove this name from the list? Their items stay, and the link you sent keeps working."],
+["สร้างลิงค์แล้ว","Link created"],
+["ใส่ชื่อเพื่อนก่อน","Add your friend's name first"],
 ["ค่าบริการ","Shopper fee"],
 ["ค่าสินค้า","Items"],
 ["รวม","Total"],
@@ -1249,7 +1256,7 @@ function openShare(){
 ทุกคนกดลิงค์เดียวกัน แต่เห็นแค่ของตัวเอง</p>
     <div class="share" style="margin:8px 0"><code>${esc(link)}</code><button class="btn sm" onclick="copyLink('${link}')">คัดลอก</button></div>
     ${navigator.share?`<button class="btn block ghost" onclick="navigator.share({title:'ฝากซื้อกับ ${esc(S.trip.shopper)} · ${esc(S.trip.name)}',url:'${link}'})">แชร์…</button>`:''}
-    <h3 style="margin-top:18px">ลิงค์ส่วนตัว</h3><p class="muted">ลิงค์เฉพาะบุคคล ใส่ชื่อไว้ให้เลย จะได้รู้ว่าส่งให้ใครไปแล้วบ้าง</p>
+    <h3 style="margin-top:18px">ลิงค์ส่วนตัว</h3><p class="muted">ลิงค์เฉพาะบุคคล</p>
     <div class="row" style="margin-top:8px"><input id="plName" placeholder="ชื่อเพื่อน" style="padding:7px 12px;border:1.5px solid var(--line);border-radius:12px;height:38px;background:var(--card)"><button class="btn sm" onclick="personalLink()">สร้าง</button></div><div id="plOut"></div>
     ${linkList()}`);
 }
@@ -1257,20 +1264,20 @@ async function toggleInvite(fuid,on){const inv=new Set(S.trip.invited||[]);on?in
 function tokLink(tok,name){return location.origin+location.pathname+`?t=${S.tripId}&r=1&p=${tok}&n=${encodeURIComponent(name||'')}`}
 function linkList(){
   const ls=(S.trip.links||[]).slice().sort((a,b)=>(b.at||0)-(a.at||0));
-  if(!ls.length)return `<h3 style="margin-top:18px">ลิงค์ที่ส่งไปแล้ว</h3><p class="muted">ยังไม่ได้สร้างลิงค์ส่วนตัวให้ใคร สร้างแล้วชื่อจะมาอยู่ตรงนี้</p>`;
-  const rows=ls.map(l=>`<div class="smallcard"><div class="n">${esc(l.name)}</div><div style="display:flex;gap:6px;flex:none"><button class="btn ghost sm" onclick="copyTok('${l.tok}')">คัดลอก</button><button class="btn ghost sm" onclick="delLink('${l.tok}')">ลบ</button></div></div>`).join('');
-  return `<h3 style="margin-top:18px">ลิงค์ที่ส่งไปแล้ว · ${ls.length}</h3><div class="card" style="margin-top:8px">${rows}</div>`;
+  if(!ls.length)return `<h3 style="margin-top:14px">ลิงค์ที่ส่งไปแล้ว</h3><p class="muted">ยังไม่ได้สร้างลิงค์ส่วนตัวให้ใคร สร้างแล้วชื่อจะมาอยู่ตรงนี้</p>`;
+  const rows=ls.map(l=>`<div class="smallcard lrow"><div class="n">${esc(l.name)}</div><div class="lacts"><button class="btn ghost sm" onclick="copyTok('${l.tok}')">คัดลอก</button><button class="btn ghost sm" onclick="delLink('${l.tok}')">ลบ</button></div></div>`).join('');
+  return `<h3 style="margin-top:14px">ลิงค์ที่ส่งไปแล้ว · ${ls.length}</h3><div class="card lcard" style="margin-top:6px">${rows}</div>`;
 }
 async function personalLink(){const n=$('#plName').value.trim();if(!n)return toast('ใส่ชื่อเพื่อนก่อน');
   const tok=uid(8);const links=[...(S.trip.links||[]),{tok,name:n,at:Date.now()}];
   try{await store.updateTrip(S.tripId,{links});}catch(e){}
   S.trip.links=links;const l=tokLink(tok,n);
   openShare();$('#plOut').innerHTML=`<div class="share" style="margin-top:8px"><code>${esc(l)}</code><button class="btn sm" onclick="copyLink('${l}')">คัดลอก</button></div>`;
-  toast('สร้างลิงค์ให้ '+n+' แล้ว');
+  toast(tr('สร้างลิงค์แล้ว')+' · '+n);
 }
 function copyTok(tok){const l=(S.trip.links||[]).find(x=>x.tok===tok);if(l)copyLink(tokLink(tok,l.name))}
 async function delLink(tok){const l=(S.trip.links||[]).find(x=>x.tok===tok);if(!l)return;
-  if(!confirm(tr('เอา '+l.name+' ออกจากรายการ? ของที่ฝากมาแล้วไม่หาย และลิงค์ที่ส่งไปแล้วยังใช้ได้')))return;
+  if(!confirm(tr('เอาชื่อนี้ออกจากรายการ? ของที่ฝากมาแล้วไม่หาย และลิงค์ที่ส่งไปแล้วยังใช้ได้')+'\n\n'+l.name))return;
   const links=(S.trip.links||[]).filter(x=>x.tok!==tok);
   try{await store.updateTrip(S.tripId,{links});}catch(e){}
   S.trip.links=links;openShare();
